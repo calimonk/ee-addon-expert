@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-06-03
+
+### Fixed
+- Release downloads from GitHub returned `HTTP 415 Unsupported Media Type`
+  whenever the install path fell through to `zipball_url` (source archive
+  — i.e. any release that doesn't ship a `.zip` asset, which is the common
+  case for tagged-only releases). GitHub's zipball endpoint rejects a
+  strict `Accept: application/octet-stream` header. Switched the
+  download Accept to `*/*`, which both endpoint shapes accept — asset
+  downloads via `browser_download_url` still serve the binary
+  unchanged.
+
 ## [1.2.0] - 2026-06-03
 
 - Add GitHub Releases tracking. Each installed add-on can be mapped to a

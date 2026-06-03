@@ -191,8 +191,18 @@ class ReleaseInstaller
             CURLOPT_TIMEOUT        => self::DOWNLOAD_TIMEOUT_SECONDS,
             CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS,
             CURLOPT_USERAGENT      => self::USER_AGENT,
+            // Accept: */* on purpose. The two URL shapes we hit have
+            // different content-type expectations:
+            //   - browser_download_url (release assets): serves binary
+            //     regardless of Accept.
+            //   - zipball_url (source archives): GitHub returns HTTP 415
+            //     "Unsupported Media Type" if Accept is the strict
+            //     application/octet-stream, but accepts any of */*,
+            //     application/zip, or application/vnd.github+json and
+            //     then 302-redirects to codeload.github.com.
+            // */* works for both with a single header set.
             CURLOPT_HTTPHEADER     => [
-                'Accept: application/octet-stream',
+                'Accept: */*',
                 'X-GitHub-Api-Version: 2022-11-28',
             ],
             CURLOPT_NOPROGRESS     => false,
