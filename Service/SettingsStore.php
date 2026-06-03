@@ -12,8 +12,9 @@ class SettingsStore
     public const DEFAULTS = [
         // CP Custom-menu integration. Off-by-default-friendly behavior:
         // the menu item only appears if the admin has added our addon to
-        // their role's Custom menu via Members → Roles. This setting
-        // gates whether our extension hook *responds* when called.
+        // the Custom menu via Settings → Menu Manager
+        // (/cp/settings/menu-manager/). This setting gates whether our
+        // extension hook *responds* when called.
         'show_in_custom_menu' => 'y',
 
         // Where the Custom-menu entry points: 'releases' | 'packages'

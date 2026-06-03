@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-06-03
+
+### Fixed (docs)
+- In-product copy on the Settings screen and the extension docblock
+  pointed the admin at the wrong location for adding the Custom-menu
+  entry. The actual path is **Settings → Menu Manager**
+  (`/cp/settings/menu-manager/`), not "Members → Roles → CP & Tools".
+  Corrected.
+
 ## [1.3.2] - 2026-06-03
 
 ### Fixed

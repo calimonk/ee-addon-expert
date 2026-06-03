@@ -17,9 +17,9 @@ $showInMenu = ($values['show_in_custom_menu'] ?? 'y') === 'y';
     <p class="addi-muted" style="font-size:13px">
       These settings control behaviour of the Add-on Manager + Custom-menu
       integration. The admin still needs to add <strong>Add-on Manager +</strong>
-      to their role's Custom menu via <code>Members → Roles → CP &amp; Tools →
-      Menu Manager</code>; this screen only configures what we render once
-      they've done so.
+      to the Custom menu via <code>Settings → Menu Manager</code>
+      (<code>/cp/settings/menu-manager/</code>); this screen only configures
+      what we render once they've done so.
     </p>
 
     <form method="post" action="<?= $h($save_url) ?>">

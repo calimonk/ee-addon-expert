@@ -18,14 +18,14 @@ use JavidFazaeli\AddonInstaller\Service\SettingsStore;
  *   - custom_menu_show_count  'y'|'n'  (default 'y')
  *
  * The admin must STILL add Add-on Manager + to their role's Custom menu
- * via Members → Roles → CP & Tools → Menu Manager. EE designed it that
- * way so addons can't force-clutter every admin's nav. This hook
- * customises what's rendered once the admin has opted in.
+ * via Settings → Menu Manager (/cp/settings/menu-manager/). EE designed
+ * it that way so addons can't force-clutter every admin's nav. This
+ * hook customises what's rendered once the admin has opted in.
  */
 class Addon_installer_ext
 {
     public $name        = 'Addon Manager +';
-    public $version     = '1.3.2';
+    public $version     = '1.3.3';
     public $description = 'Custom-menu integration for Addon Manager +';
     public $docs_url    = 'https://github.com/calimonk/ee-addon-manager';
     public $settings_exist = 'n'; // Settings live in our own Settings screen.
