@@ -120,18 +120,18 @@ class Releases extends AbstractRoute
                 $result = $releaseInstaller->installLatestRelease($shortName, $mapping['repo']);
 
                 $isSelf = ! empty($result['is_self']);
+                $addonsUrl = ee('CP/URL')->make('addons')->compile();
                 $body = sprintf(
-                    '%s v%s was extracted from %s. ',
+                    '%s v%s was extracted from %s.',
                     $shortName,
                     $result['version'] !== '' ? $result['version'] : 'latest',
                     $result['source']
                 );
-                $body .= $isSelf
-                    ? 'This was a self-update of Addon Manager + itself. Click the '
-                      . '"Update" prompt on the Add-on Manager + card below to finalize '
-                      . 'the DB-side version bump.'
-                    : 'Click the "Update" prompt on the ' . $shortName
-                      . ' card below to finalize and run any migrations.';
+                $body .= ' Next step: open ';
+                $body .= '<a href="' . htmlspecialchars($addonsUrl, ENT_QUOTES, 'UTF-8') . '">Developer → Add-Ons</a>';
+                $body .= ' and click the <strong>Update</strong> prompt on the ';
+                $body .= htmlspecialchars($isSelf ? 'Add-on Manager +' : $shortName, ENT_QUOTES, 'UTF-8');
+                $body .= ' card to finalize the install (DB version bump + any migrations).';
 
                 ee('CP/Alert')->makeBanner('addon-installer-release-install')
                     ->asSuccess()
@@ -139,13 +139,17 @@ class Releases extends AbstractRoute
                     ->addToBody($body)
                     ->defer();
 
-                // Redirect to EE's native Add-Ons list. It shows the
-                // "Update Available" prompt with the right POST+CSRF
-                // form so the admin finalizes the install cleanly.
-                // GET-redirecting to addons/update/{short} (the previous
-                // behavior) hit a 403 in EE 7 — that endpoint is
-                // POST-only.
-                ee()->functions->redirect($result['post_install_url']);
+                // Redirect back to our own Releases screen rather than
+                // EE's native cp/addons listing. Earlier versions
+                // redirected to cp/addons hoping EE's "Update Available"
+                // prompt would naturally pick up the install, but that
+                // target returned a transient 403 in some EE 7 setups
+                // (suspected: session-token validation interaction with
+                // the very-fresh on-disk version that EE hasn't fully
+                // re-cached yet). Staying inside our own authorized
+                // routes is reliable; the banner gives the user a
+                // direct link to Developer → Add-Ons to finalize.
+                ee()->functions->redirect($selfUrl);
             } catch (\Throwable $e) {
                 ee('CP/Alert')->makeBanner('addon-installer-release-install')
                     ->asIssue()

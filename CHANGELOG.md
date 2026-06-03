@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-06-03
+
+### Fixed
+- **Transient 403 after a successful one-click install**. The 1.3.1
+  installer correctly downloaded, extracted, swapped, and audit-logged
+  the new release, but the post-install `302 → cp/addons` redirect hit
+  a 403 on the EE-native Add-Ons listing page in some EE 7 setups. The
+  install itself was fine (the new version became visible after a few
+  minutes once EE re-cached) but the 403 was a confusing dead-end for
+  the admin.
+
+  Now: after a successful install we redirect back to our own Releases
+  screen (which we know is authorized — we just rendered the page that
+  POSTed) and the success banner contains an explicit link to
+  Developer → Add-Ons. The admin clicks it as a normal user-initiated
+  GET, no programmatic redirect into a possibly-transient state.
+
 ## [1.3.1] - 2026-06-03
 
 ### Fixed
