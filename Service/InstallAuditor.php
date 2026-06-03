@@ -37,6 +37,12 @@ class InstallAuditor
             . DIRECTORY_SEPARATOR . 'install.log';
     }
 
+    /** Resolved path on disk where events are appended. */
+    public function logPath(): string
+    {
+        return $this->file;
+    }
+
     /**
      * Append an event. Failures are swallowed silently — audit logging
      * must NEVER block an install or surface as a CP error to the admin.

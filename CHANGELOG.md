@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [1.3.4] - 2026-06-03
+## [1.3.5] - 2026-06-03
+
+### Changed
+- **Audit log promoted to a top-level sidebar entry** (Add-on Manager + →
+  Audit Log) and removed from the bottom of the Releases screen. The
+  dedicated page shows a wider window (last 200 events vs the previous
+  inline 25), a per-event-type count summary, a new "Self?" column
+  highlighting self-updates of Addon Manager +, and grep recipes for
+  poking at the raw JSONL log.
+- New `Service/InstallAuditor::logPath()` helper returns the resolved
+  on-disk path for the view to surface.
 
 ### Changed
 - **Custom-menu label is now configurable** and defaults to **"Addons"**

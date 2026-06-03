@@ -217,18 +217,16 @@ class Releases extends AbstractRoute
             }
         }
 
-        $auditTail = $auditor->tail(25);
-
         $this->setBody('Releases', [
             'packages'      => $packages,
             'admin_map'     => $adminMap,
             'updates_count' => $updatesCount,
-            'audit_tail'    => $auditTail,
             'refresh_url'   => $selfUrl->compile(),
             'save_url'      => $selfUrl->compile(),
             'csrf_token'    => $installer->csrfToken(),
             'manager_url'   => ee('CP/URL')->make('addons')->compile(),
             'packages_url'  => ee('CP/URL')->make('addons/settings/addon_installer/packages')->compile(),
+            'audit_url'     => ee('CP/URL')->make('addons/settings/addon_installer/audit-log')->compile(),
             'docs_url'      => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
         ]);
 
