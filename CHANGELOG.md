@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-03
+
 - Add GitHub Releases tracking. Each installed add-on can be mapped to a
   GitHub repo, either via an opt-in `'github_repo' => 'owner/repo'` key in
   its `addon.setup.php` or via a new admin-mapped table on the new

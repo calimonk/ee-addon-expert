@@ -8,7 +8,7 @@ use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
 return [
     'name'              => 'Addon Manager +',
     'description'       => 'Manage ExpressionEngine add-ons from ZIP packages through the control panel.',
-    'version'           => '1.2.0-dev',
+    'version'           => '1.2.0',
     'author'            => 'Javid Fazaeli',
     'author_url'        => 'https://fazaeli.dev',
     'namespace'         => 'JavidFazaeli\AddonInstaller',
