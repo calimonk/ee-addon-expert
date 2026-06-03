@@ -17,6 +17,9 @@ class GitHubReleaseChecker
     /** Seconds between live fetches for the same repo. */
     private const TTL_SECONDS = 12 * 3600;
 
+    /** Repo-identity cache TTL. Identity changes rarely; weekly is fine. */
+    private const IDENTITY_TTL_SECONDS = 7 * 24 * 3600;
+
     /** Seconds to wait for the GitHub API before giving up. */
     private const HTTP_TIMEOUT = 4;
 
@@ -152,6 +155,156 @@ class GitHubReleaseChecker
     {
         $safe = preg_replace('#[^A-Za-z0-9._-]+#', '_', $ownerRepo);
         return $this->cacheDir . 'release_' . $safe . '.json';
+    }
+
+    private function identityCacheFile(string $ownerRepo): string
+    {
+        $safe = preg_replace('#[^A-Za-z0-9._-]+#', '_', $ownerRepo);
+        return $this->cacheDir . 'repo_' . $safe . '.json';
+    }
+
+    /* ---- repo identity (TOFU) -------------------------------------- */
+
+    /**
+     * Cached repo identity (owner_id, repo_id, created_at, etc.) without
+     * making an HTTP call. Returns null on miss/sentinel.
+     *
+     * @return array{
+     *   owner_id:int, owner_login:string, repo_id:int, full_name:string,
+     *   created_at:string, default_branch:string, fetched_at:int
+     * }|null
+     */
+    public function repoIdentityCached(string $ownerRepo): ?array
+    {
+        $file = $this->identityCacheFile($ownerRepo);
+        if (! is_file($file)) {
+            return null;
+        }
+        $body = @file_get_contents($file);
+        if ($body === false) {
+            return null;
+        }
+        $data = json_decode($body, true);
+        if (! is_array($data) || isset($data['_empty'])) {
+            return null;
+        }
+        return $data;
+    }
+
+    public function repoIdentityLastFetchedAt(string $ownerRepo): int
+    {
+        $file = $this->identityCacheFile($ownerRepo);
+        return is_file($file) ? (int) filemtime($file) : 0;
+    }
+
+    public function repoIdentityIsStale(string $ownerRepo): bool
+    {
+        $ts = $this->repoIdentityLastFetchedAt($ownerRepo);
+        return $ts === 0 || (time() - $ts) >= self::IDENTITY_TTL_SECONDS;
+    }
+
+    /** Hit GitHub regardless of cache age. Used at install time. */
+    public function repoIdentityRefresh(string $ownerRepo): ?array
+    {
+        if (! self::isValidRepo($ownerRepo)) {
+            return null;
+        }
+        $data = $this->fetchRepoIdentity($ownerRepo);
+        $this->ensureCacheDir();
+        @file_put_contents(
+            $this->identityCacheFile($ownerRepo),
+            json_encode($data ?: ['_empty' => time()])
+        );
+        return $data;
+    }
+
+    /** Cache-first; refresh on stale or miss. */
+    public function repoIdentity(string $ownerRepo): ?array
+    {
+        if (! $this->repoIdentityIsStale($ownerRepo)) {
+            return $this->repoIdentityCached($ownerRepo);
+        }
+        return $this->repoIdentityRefresh($ownerRepo);
+    }
+
+    public function forgetRepoIdentity(string $ownerRepo): void
+    {
+        $file = $this->identityCacheFile($ownerRepo);
+        if (is_file($file)) {
+            @unlink($file);
+        }
+    }
+
+    private function fetchRepoIdentity(string $ownerRepo): ?array
+    {
+        $url = 'https://api.github.com/repos/' . $ownerRepo;
+        [$code, $body] = $this->httpGet($url);
+
+        if ($code !== 200 || ! is_string($body) || $body === '') {
+            return null;
+        }
+
+        $decoded = json_decode($body, true);
+        if (! is_array($decoded) || empty($decoded['id'])) {
+            return null;
+        }
+
+        return [
+            'owner_id'       => (int) ($decoded['owner']['id'] ?? 0),
+            'owner_login'    => (string) ($decoded['owner']['login'] ?? ''),
+            'repo_id'        => (int) $decoded['id'],
+            'full_name'      => (string) ($decoded['full_name'] ?? $ownerRepo),
+            'created_at'     => (string) ($decoded['created_at'] ?? ''),
+            'default_branch' => (string) ($decoded['default_branch'] ?? ''),
+            'fetched_at'     => time(),
+        ];
+    }
+
+    /**
+     * Shared HTTP GET against the GitHub API. Returns [http_code, body].
+     * Used by both release-latest and repo-identity fetches.
+     *
+     * @return array{0:int,1:?string}
+     */
+    private function httpGet(string $url): array
+    {
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => self::HTTP_TIMEOUT,
+                CURLOPT_CONNECTTIMEOUT => self::HTTP_TIMEOUT,
+                CURLOPT_USERAGENT      => self::USER_AGENT,
+                CURLOPT_HTTPHEADER     => [
+                    'Accept: application/vnd.github+json',
+                    'X-GitHub-Api-Version: 2022-11-28',
+                ],
+            ]);
+            $body = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+        } else {
+            $ctx = stream_context_create([
+                'http' => [
+                    'method'        => 'GET',
+                    'timeout'       => self::HTTP_TIMEOUT,
+                    'ignore_errors' => true,
+                    'header'        => "User-Agent: " . self::USER_AGENT . "\r\n"
+                        . "Accept: application/vnd.github+json\r\n"
+                        . "X-GitHub-Api-Version: 2022-11-28\r\n",
+                ],
+            ]);
+            $body = @file_get_contents($url, false, $ctx);
+            $code = 200;
+            if (isset($http_response_header[0]) && preg_match('#\s(\d{3})\s#', $http_response_header[0], $m)) {
+                $code = (int) $m[1];
+            }
+            if ($body === false) {
+                $code = 0;
+            }
+        }
+
+        return [$code, is_string($body) ? $body : null];
     }
 
     private function ensureCacheDir(): void

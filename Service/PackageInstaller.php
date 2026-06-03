@@ -127,6 +127,10 @@ class PackageInstaller
                 'remote_checked_at' => $remote['checked_at'],
                 'remote_update_available' => $remote['update_available'],
                 'remote_status' => $remote['status'],
+                'remote_trust_state' => $remote['trust_state'],
+                'remote_trust_diff' => $remote['trust_diff'] ?? [],
+                'remote_trust_pinned' => $remote['trust_pinned'] ?? null,
+                'remote_trust_observed' => $remote['trust_observed'] ?? null,
                 // POST target for the "Update from GitHub" button. Empty
                 // when no repo is configured for this short_name.
                 'remote_install_url' => $remote['repo'] !== null ? $releasesPostUrl : '',
@@ -183,6 +187,11 @@ class PackageInstaller
             'update_available' => false,
             // status ∈ {unconfigured, never_checked, stale, fresh, error}
             'status' => 'unconfigured',
+            // trust_state ∈ {none, unverified, trusted, changed}
+            'trust_state' => 'none',
+            'trust_diff' => [],
+            'trust_pinned' => null,
+            'trust_observed' => null,
         ];
 
         $mapping = $this->sources()->resolve($shortName);
@@ -194,6 +203,19 @@ class PackageInstaller
         $checker = $this->releases();
         $checkedAt = $checker->lastCheckedAt($repo);
         $cached = $checker->cached($repo);
+
+        // Trust comparison uses the *cached* identity (no HTTP from
+        // listing). Install-time uses fresh identity — that's the
+        // authoritative gate. This view-time comparison is best-effort
+        // visibility: if the cached identity is stale or absent the
+        // trust column shows "unverified" until the next refresh.
+        $cachedIdentity = $checker->repoIdentityCached($repo);
+        $trustCmp = function_exists('ee')
+            ? ee('addon_installer:trustStore')->compare($repo, $cachedIdentity)
+            : (new TrustStore())->compare($repo, $cachedIdentity);
+        $trustState = $cachedIdentity === null
+            ? ($trustCmp['pinned'] !== null ? 'trusted' : 'none')
+            : $trustCmp['state'];
 
         if ($checkedAt === 0) {
             return array_merge($empty, [
@@ -228,6 +250,10 @@ class PackageInstaller
             'checked_at' => $checkedAt,
             'update_available' => $isNewer,
             'status' => $checker->isStale($repo) ? 'stale' : 'fresh',
+            'trust_state' => $trustState,
+            'trust_diff' => $trustCmp['diff'] ?? [],
+            'trust_pinned' => $trustCmp['pinned'] ?? null,
+            'trust_observed' => $trustCmp['observed'] ?? null,
         ];
     }
 
@@ -256,6 +282,15 @@ class PackageInstaller
             }
 
             $data = $checker->refresh($mapping['repo']);
+
+            // Refresh repo identity only when stale (7d TTL). Keeps the
+            // GitHub API budget reasonable on Check-for-updates while
+            // still surfacing trust changes within a week of them
+            // happening. Install-time check is the authoritative gate.
+            if ($checker->repoIdentityIsStale($mapping['repo'])) {
+                $checker->repoIdentityRefresh($mapping['repo']);
+            }
+
             $results[$shortName] = [
                 'repo' => $mapping['repo'],
                 'source' => $mapping['source'],

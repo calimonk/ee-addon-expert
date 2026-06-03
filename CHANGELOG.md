@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-03
+
+### Added — Supply-chain protection
+- **TOFU repo identity pinning.** On first install of a GitHub-mapped
+  add-on, the GitHub-controlled stable identifiers (`owner_id`, `repo_id`,
+  `created_at`) are pinned to `system/user/config/addon_installer_trust.json`.
+  Every subsequent install attempt re-fetches identity from GitHub
+  (cache-bypass, always fresh) and compares. A mismatch — consistent with
+  ownership transfer or RepoJacking — **hard-blocks the install** with a
+  diff banner. Username renames on the same owner do not trigger false
+  alarms (owner_id is stable across renames).
+- **"Reconfirm trust" action** on the Releases screen for legitimate
+  identity changes (real ownership transfer, intentional fork migration).
+  Pinning the new identity is itself audit-logged.
+- **Install audit log** at `system/user/cache/addon_installer/install.log`
+  (JSONL, ~1 MB rotating). Records `install_ok`, `install_failed`,
+  `install_blocked`, `trust_pinned`, `trust_reconfirmed_manual` events
+  with admin user, repo, version, URL, identity, and reason. Last 25
+  entries surface at the bottom of the Releases screen.
+- **Self-protection.** The same TOFU rules apply to Addon Manager +'s
+  own mapping (`calimonk/ee-addon-manager`). A hostile takeover of our
+  own repo would otherwise become a self-pwn vector via one-click
+  update.
+
+### Added — CP Custom-menu integration
+- New extension class `Addon_installer_ext` registers the `cp_custom_menu`
+  hook. When the admin adds Add-on Manager + to a role's Custom menu via
+  `Members → Roles → CP & Tools → Menu Manager`, our extension renders
+  the label as `Add-on Manager + (N)` when there are pending GitHub
+  updates, with a click target the admin can choose.
+- New **Settings** screen with toggles:
+  - `show_in_custom_menu` (on/off — gates the hook output)
+  - `custom_menu_target` (Releases / Packages / Install ZIP)
+  - `custom_menu_show_count` (on/off — appends `(N)`)
+- `upd.addon_installer.php` registers/removes the extension row on
+  install/uninstall, and backfills the row on update so upgrades from
+  1.2.x pick up the hook automatically.
+
+### Internal
+- New services: `TrustStore`, `InstallAuditor`, `SettingsStore`.
+- `GitHubReleaseChecker` learned `repoIdentityCached/Refresh/Latest` for
+  the `/repos/{owner}/{repo}` endpoint (7-day TTL on the routine path).
+- Sidebar grows a Settings entry.
+
 ## [1.2.1] - 2026-06-03
 
 ### Fixed

@@ -42,15 +42,23 @@ class ReleaseInstaller
 
     private string $addonsPath;
     private GitHubReleaseChecker $checker;
+    private TrustStore $trust;
+    private InstallAuditor $auditor;
 
-    public function __construct(?string $addonsPath = null, ?GitHubReleaseChecker $checker = null)
-    {
+    public function __construct(
+        ?string $addonsPath = null,
+        ?GitHubReleaseChecker $checker = null,
+        ?TrustStore $trust = null,
+        ?InstallAuditor $auditor = null
+    ) {
         $this->addonsPath = rtrim(
             $addonsPath ?: PackageInstaller::detectAddonsPath(),
             DIRECTORY_SEPARATOR
         ) . DIRECTORY_SEPARATOR;
 
         $this->checker = $checker ?: new GitHubReleaseChecker();
+        $this->trust   = $trust ?: new TrustStore();
+        $this->auditor = $auditor ?: new InstallAuditor();
     }
 
     /**
@@ -64,7 +72,7 @@ class ReleaseInstaller
      *   backup_path:?string, update_url:string
      * }
      */
-    public function installLatestRelease(string $shortName, string $ownerRepo): array
+    public function installLatestRelease(string $shortName, string $ownerRepo, bool $reconfirmTrust = false): array
     {
         if (! GitHubReleaseChecker::isValidRepo($ownerRepo)) {
             throw new RuntimeException('Invalid GitHub repo: ' . $ownerRepo);
@@ -76,10 +84,75 @@ class ReleaseInstaller
             throw new RuntimeException('PHP ZipArchive extension is required.');
         }
 
-        // Always re-fetch — the cache may be stale and we want to install
-        // the actual newest release, not a 12h-old snapshot.
+        // 1. Identity verification — ALWAYS fetched fresh at install time,
+        //    never trusting the 7-day identity cache. This is the supply
+        //    chain gate: a repo transfer or RepoJacking incident shows up
+        //    here, and we refuse to swap. The release fetch below uses
+        //    the same fresh data so we can't be tricked by stale caches.
+        $identity = $this->checker->repoIdentityRefresh($ownerRepo);
+        if ($identity === null) {
+            $this->auditor->record([
+                'event' => 'install_blocked',
+                'reason' => 'identity_unreachable',
+                'short_name' => $shortName,
+                'repo' => $ownerRepo,
+            ]);
+            throw new RuntimeException(
+                'Could not verify ' . $ownerRepo . ' against GitHub. '
+                . 'Install refused — this could be a network failure or '
+                . 'the repo may have been deleted/renamed. Check '
+                . 'connectivity and retry.'
+            );
+        }
+
+        $comparison = $this->trust->compare($ownerRepo, $identity);
+
+        if ($comparison['state'] === TrustStore::STATE_CHANGED && ! $reconfirmTrust) {
+            $this->auditor->record([
+                'event' => 'install_blocked',
+                'reason' => 'trust_mismatch',
+                'short_name' => $shortName,
+                'repo' => $ownerRepo,
+                'pinned' => $comparison['pinned'],
+                'observed' => $comparison['observed'],
+                'diff' => $comparison['diff'],
+            ]);
+            throw new RuntimeException($this->trustMismatchMessage($ownerRepo, $comparison));
+        }
+
+        // First install OR explicit reconfirm: pin (or re-pin) anchor.
+        if ($comparison['state'] !== TrustStore::STATE_TRUSTED) {
+            $pinnedBy = null;
+            if (function_exists('ee')) {
+                try {
+                    $login = ee()->session->userdata('username');
+                    $pinnedBy = is_string($login) && $login !== '' ? $login : null;
+                } catch (\Throwable $e) {
+                    // best-effort
+                }
+            }
+            $this->trust->pin($ownerRepo, $identity, $pinnedBy);
+            $this->auditor->record([
+                'event' => 'trust_pinned',
+                'short_name' => $shortName,
+                'repo' => $ownerRepo,
+                'reason' => $comparison['state'] === TrustStore::STATE_CHANGED
+                    ? 'reconfirm'
+                    : 'first_seen',
+                'identity' => $identity,
+            ]);
+        }
+
+        // 2. Refresh the release. Forced — cache may be stale and we
+        //    want to install the actual newest release.
         $release = $this->checker->refresh($ownerRepo);
         if ($release === null) {
+            $this->auditor->record([
+                'event' => 'install_blocked',
+                'reason' => 'release_fetch_failed',
+                'short_name' => $shortName,
+                'repo' => $ownerRepo,
+            ]);
             throw new RuntimeException(
                 'Could not fetch latest release for ' . $ownerRepo
                 . '. Check network connectivity and GitHub rate limits.'
@@ -88,19 +161,67 @@ class ReleaseInstaller
 
         [$downloadUrl, $sourceLabel] = $this->pickDownloadUrl($release, $shortName);
 
-        $tmpZip = $this->downloadToTemp($downloadUrl);
+        try {
+            $tmpZip = $this->downloadToTemp($downloadUrl);
+        } catch (\Throwable $e) {
+            $this->auditor->record([
+                'event' => 'install_failed',
+                'reason' => 'download',
+                'short_name' => $shortName,
+                'repo' => $ownerRepo,
+                'version' => (string) ($release['version'] ?? ''),
+                'url' => $downloadUrl,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         try {
             $stagingDir = $this->extractStaging($tmpZip, $shortName);
-        } finally {
+        } catch (\Throwable $e) {
             @unlink($tmpZip);
+            $this->auditor->record([
+                'event' => 'install_failed',
+                'reason' => 'extract',
+                'short_name' => $shortName,
+                'repo' => $ownerRepo,
+                'version' => (string) ($release['version'] ?? ''),
+                'url' => $downloadUrl,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+        @unlink($tmpZip);
+
+        try {
+            $backupPath = $this->swapInto($shortName, $stagingDir);
+        } catch (\Throwable $e) {
+            $this->auditor->record([
+                'event' => 'install_failed',
+                'reason' => 'swap',
+                'short_name' => $shortName,
+                'repo' => $ownerRepo,
+                'version' => (string) ($release['version'] ?? ''),
+                'url' => $downloadUrl,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
         }
 
-        $backupPath = $this->swapInto($shortName, $stagingDir);
-
-        // The new version is now on disk. Forget the cache so the next CP
-        // view reflects state directly from the new addon.setup.php.
         $this->checker->forget($ownerRepo);
+
+        $this->auditor->record([
+            'event' => 'install_ok',
+            'short_name' => $shortName,
+            'repo' => $ownerRepo,
+            'version' => (string) ($release['version'] ?? ''),
+            'url' => $downloadUrl,
+            'source' => $sourceLabel,
+            'backup_path' => $backupPath,
+            'owner_id' => (int) ($identity['owner_id'] ?? 0),
+            'repo_id' => (int) ($identity['repo_id'] ?? 0),
+            'trust_state' => $reconfirmTrust ? 'reconfirmed' : 'trusted',
+        ]);
 
         return [
             'short_name'  => $shortName,
@@ -115,6 +236,35 @@ class ReleaseInstaller
                 ])->compile()
                 : '',
         ];
+    }
+
+    /**
+     * Format a human-readable trust-mismatch message. Lists exactly
+     * which fields changed and what they changed from/to. Used as the
+     * RuntimeException message bubbled up to the CP banner.
+     */
+    private function trustMismatchMessage(string $ownerRepo, array $comparison): string
+    {
+        $lines = [];
+        $lines[] = 'TRUST CHECK FAILED for ' . $ownerRepo . '.';
+        $lines[] = 'The repo identity does not match what was pinned on first install:';
+        foreach ($comparison['diff'] as $field => $pair) {
+            $lines[] = sprintf(
+                '  %s: pinned=%s, now=%s',
+                $field,
+                var_export($pair['pinned'], true),
+                var_export($pair['observed'], true)
+            );
+        }
+        $observedLogin = (string) ($comparison['observed']['owner_login'] ?? '?');
+        $pinnedLogin   = (string) ($comparison['pinned']['owner_login']   ?? '?');
+        if ($observedLogin !== $pinnedLogin) {
+            $lines[] = '  owner_login: pinned=' . $pinnedLogin . ', now=' . $observedLogin;
+        }
+        $lines[] = 'This is consistent with ownership transfer or RepoJacking. '
+            . 'Install refused. Review on GitHub, then use the "Reconfirm trust" '
+            . 'action on the Releases screen if the change is legitimate.';
+        return implode("\n", $lines);
     }
 
     /**

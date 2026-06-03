@@ -31,8 +31,62 @@ class Releases extends AbstractRoute
         $registry         = ee('addon_installer:updateSourceRegistry');
         $checker          = ee('addon_installer:githubReleaseChecker');
         $releaseInstaller = ee('addon_installer:releaseInstaller');
+        $trust            = ee('addon_installer:trustStore');
+        $auditor          = ee('addon_installer:installAuditor');
 
         $selfUrl = ee('CP/URL')->make('addons/settings/addon_installer/releases');
+
+        // POST: explicit "reconfirm trust" — admin has reviewed the
+        // identity change on GitHub and accepted it. We re-fetch the
+        // identity (fresh, no cache) and overwrite the pinned anchor.
+        if (ee('Request')->isPost() && ee()->input->post('reconfirm_trust')) {
+            $shortName = (string) ee()->input->post('short_name');
+            $shortName = preg_match('#^[a-z0-9_]+$#', $shortName) ? $shortName : '';
+            $mapping = $shortName !== '' ? $registry->resolve($shortName) : null;
+
+            if ($mapping === null) {
+                ee('CP/Alert')->makeBanner('addon-installer-trust')
+                    ->asIssue()
+                    ->withTitle('Reconfirm failed')
+                    ->addToBody('No mapping found for ' . $shortName . '.')
+                    ->defer();
+                ee()->functions->redirect($selfUrl);
+            }
+
+            $identity = $checker->repoIdentityRefresh($mapping['repo']);
+            if ($identity === null) {
+                ee('CP/Alert')->makeBanner('addon-installer-trust')
+                    ->asIssue()
+                    ->withTitle('Reconfirm failed')
+                    ->addToBody('Could not fetch identity from GitHub. Try again.')
+                    ->defer();
+                ee()->functions->redirect($selfUrl);
+            }
+
+            $pinnedBy = null;
+            try {
+                $login = ee()->session->userdata('username');
+                $pinnedBy = is_string($login) && $login !== '' ? $login : null;
+            } catch (\Throwable $e) {
+                // best effort
+            }
+            $trust->pin($mapping['repo'], $identity, $pinnedBy);
+
+            $auditor->record([
+                'event' => 'trust_reconfirmed_manual',
+                'short_name' => $shortName,
+                'repo' => $mapping['repo'],
+                'identity' => $identity,
+            ]);
+
+            ee('CP/Alert')->makeBanner('addon-installer-trust')
+                ->asSuccess()
+                ->withTitle('Trust reconfirmed')
+                ->addToBody('The new identity for ' . $mapping['repo'] . ' is now pinned. '
+                    . 'You can install the release.')
+                ->defer();
+            ee()->functions->redirect($selfUrl);
+        }
 
         // POST: install/update an add-on from its mapped GitHub release.
         // Routed to here from both the Packages and Releases screens so
@@ -147,10 +201,13 @@ class Releases extends AbstractRoute
             }
         }
 
+        $auditTail = $auditor->tail(25);
+
         $this->setBody('Releases', [
             'packages'      => $packages,
             'admin_map'     => $adminMap,
             'updates_count' => $updatesCount,
+            'audit_tail'    => $auditTail,
             'refresh_url'   => $selfUrl->compile(),
             'save_url'      => $selfUrl->compile(),
             'csrf_token'    => $installer->csrfToken(),

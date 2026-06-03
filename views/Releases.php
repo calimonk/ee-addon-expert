@@ -72,6 +72,7 @@ $fmtAge = function (int $ts): string {
               <th style="padding:9px 12px">GitHub repo</th>
               <th style="padding:9px 12px">Latest release</th>
               <th style="padding:9px 12px">Checked</th>
+              <th style="padding:9px 12px" title="Trust on first use — does the GitHub repo identity (owner ID, repo ID, created_at) still match what was pinned on first install?">Trust</th>
               <th style="padding:9px 12px">Status</th>
             </tr>
           </thead>
@@ -89,6 +90,10 @@ $fmtAge = function (int $ts): string {
               $isManifest = $repoSource === 'manifest';
               $adminValue = $adminMap[$short] ?? '';
 
+              $trustState = (string) ($pkg['remote_trust_state'] ?? 'none');
+              $trustDiff  = (array) ($pkg['remote_trust_diff'] ?? []);
+              $trustPinned = $pkg['remote_trust_pinned'] ?? null;
+
               $statusLabel = [
                 'unconfigured'  => 'Not tracked',
                 'never_checked' => 'Mapped (never checked)',
@@ -97,7 +102,12 @@ $fmtAge = function (int $ts): string {
                 'error'         => 'Last fetch failed',
               ][$status] ?? $status;
 
-              $rowBg = ! empty($pkg['remote_update_available']) ? '#fef3c7' : 'transparent';
+              // Trust mismatch is the loudest signal — paints the row red
+              // and replaces the install action with a Reconfirm prompt.
+              $isTrustChanged = $trustState === 'changed';
+              $rowBg = $isTrustChanged
+                ? '#fee2e2'
+                : (! empty($pkg['remote_update_available']) ? '#fef3c7' : 'transparent');
             ?>
             <tr style="border-top:1px solid #f1f5f9;background:<?= $rowBg ?>">
               <td style="padding:8px 12px">
@@ -137,7 +147,49 @@ $fmtAge = function (int $ts): string {
                 <?= $h($fmtAge($checkedAt)) ?>
               </td>
               <td style="padding:8px 12px;font-size:12px">
-                <?php if (! empty($pkg['remote_update_available']) && ! empty($pkg['remote_install_url'])): ?>
+                <?php if ($trustState === 'trusted'): ?>
+                  <span style="background:#dcfce7;color:#166534;padding:3px 8px;border-radius:3px;font-weight:600"
+                        title="Pinned <?= $h(date('Y-m-d', (int) ($trustPinned['first_seen_at'] ?? 0))) ?> by <?= $h((string) ($trustPinned['pinned_by'] ?? 'unknown')) ?>. owner_id=<?= $h((string) ($trustPinned['owner_id'] ?? '?')) ?>, repo_id=<?= $h((string) ($trustPinned['repo_id'] ?? '?')) ?>">
+                    ✓ trusted
+                  </span>
+                <?php elseif ($trustState === 'changed'): ?>
+                  <span style="background:#dc2626;color:#fff;padding:3px 8px;border-radius:3px;font-weight:700"
+                        title="<?php
+                          $tips = [];
+                          foreach ($trustDiff as $field => $pair) {
+                            $tips[] = $field . ': ' . var_export($pair['pinned'] ?? '?', true) . ' → ' . var_export($pair['observed'] ?? '?', true);
+                          }
+                          echo $h(implode("\n", $tips));
+                        ?>">
+                    ⚠ CHANGED
+                  </span>
+                <?php elseif ($trustState === 'unverified'): ?>
+                  <span style="background:#fef3c7;color:#78350f;padding:3px 8px;border-radius:3px;font-weight:600"
+                        title="No identity anchor pinned yet. The next install will pin one.">
+                    unverified
+                  </span>
+                <?php else: ?>
+                  <span style="color:#94a3b8">—</span>
+                <?php endif; ?>
+              </td>
+              <td style="padding:8px 12px;font-size:12px">
+                <?php if ($isTrustChanged): ?>
+                  <form method="post"
+                        action="<?= $h($refresh_url) ?>"
+                        style="margin:0"
+                        onsubmit="return confirm('This will pin the NEW repo identity for <?= $h($short) ?>. Only proceed if you have verified on GitHub that the change is legitimate (e.g., the maintainer transferred ownership, or you have explicitly migrated to a new fork). Continue?');">
+                    <?php if ($csrfToken !== ''): ?>
+                      <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
+                      <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
+                    <?php endif; ?>
+                    <input type="hidden" name="reconfirm_trust" value="1">
+                    <input type="hidden" name="short_name" value="<?= $h($short) ?>">
+                    <button type="submit"
+                            style="background:#dc2626;color:#fff;border:0;padding:4px 10px;border-radius:3px;font-weight:700;font-size:12px;cursor:pointer">
+                      Reconfirm trust
+                    </button>
+                  </form>
+                <?php elseif (! empty($pkg['remote_update_available']) && ! empty($pkg['remote_install_url'])): ?>
                   <form method="post"
                         action="<?= $h($pkg['remote_install_url']) ?>"
                         style="margin:0"
@@ -172,6 +224,70 @@ $fmtAge = function (int $ts): string {
           </span>
         </p>
       </form>
+    <?php endif; ?>
+  </section>
+
+  <?php
+  $audit = $audit_tail ?? [];
+  $eventBadge = function (string $event) {
+      switch ($event) {
+          case 'install_ok':                return ['background:#16a34a;color:#fff', 'OK'];
+          case 'install_failed':            return ['background:#dc2626;color:#fff', 'FAIL'];
+          case 'install_blocked':           return ['background:#7c2d12;color:#fff', 'BLOCKED'];
+          case 'trust_pinned':              return ['background:#0ea5e9;color:#fff', 'PINNED'];
+          case 'trust_reconfirmed_manual':  return ['background:#0284c7;color:#fff', 'RECONFIRM'];
+          default:                          return ['background:#64748b;color:#fff', strtoupper($event)];
+      }
+  };
+  ?>
+  <section class="addi-card" style="margin-top:20px">
+    <h2>Install Audit Log</h2>
+    <p class="addi-muted" style="font-size:12.5px">
+      Last <?= count($audit) ?> events from
+      <code>system/user/cache/addon_installer/install.log</code>.
+      Newest first. Rotates at ~1MB.
+    </p>
+
+    <?php if (empty($audit)): ?>
+      <p class="addi-muted">No events recorded yet.</p>
+    <?php else: ?>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
+        <thead>
+          <tr style="background:#f8fafc;text-align:left;color:#1e293b;font-weight:600">
+            <th style="padding:8px 10px">When</th>
+            <th style="padding:8px 10px">Event</th>
+            <th style="padding:8px 10px">Add-on</th>
+            <th style="padding:8px 10px">Repo</th>
+            <th style="padding:8px 10px">Version</th>
+            <th style="padding:8px 10px">Admin</th>
+            <th style="padding:8px 10px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($audit as $event):
+            $ts = (int) ($event['ts'] ?? 0);
+            $when = $ts > 0 ? date('Y-m-d H:i', $ts) : '?';
+            [$badgeStyle, $badgeText] = $eventBadge((string) ($event['event'] ?? '?'));
+            $detail = '';
+            if (! empty($event['reason']))  $detail .= 'reason=' . $event['reason'] . ' ';
+            if (! empty($event['error']))   $detail .= 'error=' . substr($event['error'], 0, 80) . ' ';
+            if (! empty($event['source']))  $detail .= 'src=' . $event['source'] . ' ';
+            if (! empty($event['trust_state'])) $detail .= 'trust=' . $event['trust_state'] . ' ';
+          ?>
+          <tr style="border-top:1px solid #f1f5f9">
+            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;color:#475569;white-space:nowrap"><?= $h($when) ?></td>
+            <td style="padding:6px 10px">
+              <span style="padding:2px 7px;border-radius:3px;font-weight:700;font-size:11px;<?= $h($badgeStyle) ?>"><?= $h($badgeText) ?></span>
+            </td>
+            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace"><?= $h((string) ($event['short_name'] ?? '—')) ?></td>
+            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;color:#475569"><?= $h((string) ($event['repo'] ?? '—')) ?></td>
+            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace"><?= $h((string) ($event['version'] ?? '')) ?></td>
+            <td style="padding:6px 10px"><?= $h((string) ($event['admin'] ?? '—')) ?></td>
+            <td style="padding:6px 10px;color:#64748b;font-size:11.5px"><?= $h(trim($detail)) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
     <?php endif; ?>
   </section>
 </div>

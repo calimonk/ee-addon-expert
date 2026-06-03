@@ -174,6 +174,35 @@ from backup), and the failure surfaces as a CP banner.
 GitHub API calls are unauthenticated (public repos only). The 60-requests/hour
 unauthenticated quota per IP is far above any realistic site's add-on count.
 
+### Supply-chain protection
+
+GitHub-distributed add-ons sit in a known attack class: an upstream maintainer
+can lose control of their account, sell the repo, or have it deleted and
+re-claimed by a malicious actor under the same `owner/repo` name (RepoJacking).
+Addon Manager + treats every install path as a supply-chain decision and
+pins a **trust anchor** on first use.
+
+- On the first install of a GitHub-mapped add-on, the GitHub-controlled stable
+  identifiers — owner numeric ID, repo numeric ID, repo `created_at` — are
+  pinned to `system/user/config/addon_installer_trust.json` alongside which
+  EE admin pinned them and when.
+- Every install attempt re-fetches identity from GitHub **bypassing the cache**
+  and compares. Any mismatch hard-blocks the install and surfaces a banner
+  listing exactly which fields changed.
+- Username renames are *not* an alarm — owner numeric ID is stable across
+  renames. Only real ownership transfers and delete+recreate scenarios trip
+  the check.
+- The Releases screen shows the trust state per add-on (`✓ trusted`,
+  `⚠ CHANGED`, `unverified`) and offers a **Reconfirm trust** action for
+  legitimate identity changes. Reconfirming is itself audit-logged.
+- Every install and trust event writes to
+  `system/user/cache/addon_installer/install.log` (JSONL, last 25 events
+  shown on the Releases screen). Useful for forensics after the fact.
+
+The same rules apply to Addon Manager +'s own self-update — a hostile
+takeover of our own repo would otherwise become a vector via the one-click
+flow.
+
 ## Roadmap
 
 - Remote package registry / URL install
