@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-06-03
+
+### Fixed
+- **Audit Log column wrapping**. Cells were force-breaking long
+  identifiers mid-word ("addon_install/er", "calimon/k", "PINNE/D"),
+  making the table unreadable on narrow CP themes. Added
+  `white-space: nowrap` to the structured-data columns (When, Event,
+  Add-on, Repo, Version, Admin, Self?), let the Detail column wrap,
+  and wrapped the table in an `overflow-x: auto` container so narrow
+  viewports get a horizontal scrollbar instead of broken words.
+- **Grep recipes at the bottom of Audit Log collapsed onto one line**
+  because PHP's `<?= ... ?>` template tag eats a trailing newline.
+  Replaced the inline interpolation with a single
+  `implode("\n", [...])` echo, which renders correctly.
+- Applied the same `white-space: nowrap` + `overflow-x: auto`
+  treatment to the Releases-screen mapping table preemptively — same
+  content shape, same risk on narrow themes.
+
+### Notes
+- The 1.3.x → 1.4.0 upgrade itself didn't trigger the new
+  auto-finalize banner because the 1.3.x installer (which performed
+  the swap) didn't write markers — that's expected. From 1.4.0
+  onwards every install writes a marker and the next page load runs
+  the EE-side finalize. The next install (1.4.0 → 1.4.1 or later) is
+  the real dog-food test of the auto-finalize feature.
+
 ## [1.4.0] - 2026-06-03
 
 ### Added — Auto-finalize EE-side updates

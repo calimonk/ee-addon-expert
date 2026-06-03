@@ -95,16 +95,17 @@ $fmtAge = function (int $ts): string {
         <?php endif; ?>
         <input type="hidden" name="save_mappings" value="1">
 
-        <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
+        <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:6px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
             <tr style="background:#f8fafc;text-align:left;color:#1e293b;font-weight:600">
-              <th style="padding:9px 12px">Add-on</th>
-              <th style="padding:9px 12px">Installed</th>
-              <th style="padding:9px 12px">GitHub repo</th>
-              <th style="padding:9px 12px">Latest release</th>
-              <th style="padding:9px 12px">Checked</th>
-              <th style="padding:9px 12px" title="Trust on first use — does the GitHub repo identity (owner ID, repo ID, created_at) still match what was pinned on first install?">Trust</th>
-              <th style="padding:9px 12px">Status</th>
+              <th style="padding:9px 12px;white-space:nowrap">Add-on</th>
+              <th style="padding:9px 12px;white-space:nowrap">Installed</th>
+              <th style="padding:9px 12px;min-width:220px">GitHub repo</th>
+              <th style="padding:9px 12px;white-space:nowrap">Latest release</th>
+              <th style="padding:9px 12px;white-space:nowrap">Checked</th>
+              <th style="padding:9px 12px;white-space:nowrap" title="Trust on first use — does the GitHub repo identity (owner ID, repo ID, created_at) still match what was pinned on first install?">Trust</th>
+              <th style="padding:9px 12px;white-space:nowrap">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -141,11 +142,11 @@ $fmtAge = function (int $ts): string {
                 : (! empty($pkg['remote_update_available']) ? '#fef3c7' : 'transparent');
             ?>
             <tr style="border-top:1px solid #f1f5f9;background:<?= $rowBg ?>">
-              <td style="padding:8px 12px">
+              <td style="padding:8px 12px;white-space:nowrap">
                 <div style="font-weight:600"><?= $h($name) ?></div>
                 <code style="color:#64748b;font-size:12px"><?= $h($short) ?></code>
               </td>
-              <td style="padding:8px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">
+              <td style="padding:8px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap">
                 <?= $h($installed !== '' ? $installed : '—') ?>
               </td>
               <td style="padding:8px 12px">
@@ -163,7 +164,7 @@ $fmtAge = function (int $ts): string {
                   >
                 <?php endif; ?>
               </td>
-              <td style="padding:8px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">
+              <td style="padding:8px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap">
                 <?php if ($remoteVer !== ''): ?>
                   <?php if ($remoteUrl !== ''): ?>
                     <a href="<?= $h($remoteUrl) ?>" target="_blank" rel="noopener"><?= $h($remoteVer) ?> ↗</a>
@@ -174,7 +175,7 @@ $fmtAge = function (int $ts): string {
                   <span style="color:#94a3b8">—</span>
                 <?php endif; ?>
               </td>
-              <td style="padding:8px 12px;color:#64748b;font-size:12px">
+              <td style="padding:8px 12px;color:#64748b;font-size:12px;white-space:nowrap">
                 <?= $h($fmtAge($checkedAt)) ?>
               </td>
               <td style="padding:8px 12px;font-size:12px">
@@ -247,6 +248,7 @@ $fmtAge = function (int $ts): string {
             <?php endforeach; ?>
           </tbody>
         </table>
+        </div>
 
         <p style="margin-top:14px">
           <button class="button button--primary" type="submit">Save mappings</button>

@@ -46,63 +46,74 @@ $eventBadge = function (string $event) {
     <?php if (empty($entries)): ?>
       <p class="addi-muted">No events recorded yet.</p>
     <?php else: ?>
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
-        <thead>
-          <tr style="background:#f8fafc;text-align:left;color:#1e293b;font-weight:600">
-            <th style="padding:8px 10px">When</th>
-            <th style="padding:8px 10px">Event</th>
-            <th style="padding:8px 10px">Add-on</th>
-            <th style="padding:8px 10px">Repo</th>
-            <th style="padding:8px 10px">Version</th>
-            <th style="padding:8px 10px">Admin</th>
-            <th style="padding:8px 10px">Self?</th>
-            <th style="padding:8px 10px">Detail</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($entries as $event):
-            $ts = (int) ($event['ts'] ?? 0);
-            $when = $ts > 0 ? date('Y-m-d H:i:s', $ts) : '?';
-            [$badgeStyle, $badgeText] = $eventBadge((string) ($event['event'] ?? '?'));
-            $isSelf = ! empty($event['is_self']);
-            $detail = '';
-            if (! empty($event['reason']))  $detail .= 'reason=' . $event['reason'] . ' ';
-            if (! empty($event['error']))   $detail .= 'error=' . substr($event['error'], 0, 120) . ' ';
-            if (! empty($event['source']))  $detail .= 'src=' . $event['source'] . ' ';
-            if (! empty($event['trust_state'])) $detail .= 'trust=' . $event['trust_state'] . ' ';
-            if (! empty($event['owner_id']))    $detail .= 'owner_id=' . $event['owner_id'] . ' ';
-            if (! empty($event['repo_id']))     $detail .= 'repo_id=' . $event['repo_id'] . ' ';
-          ?>
-          <tr style="border-top:1px solid #f1f5f9">
-            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;color:#475569;white-space:nowrap"><?= $h($when) ?></td>
-            <td style="padding:6px 10px">
-              <span style="padding:2px 7px;border-radius:3px;font-weight:700;font-size:11px;<?= $h($badgeStyle) ?>"><?= $h($badgeText) ?></span>
-            </td>
-            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace"><?= $h((string) ($event['short_name'] ?? '—')) ?></td>
-            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;color:#475569"><?= $h((string) ($event['repo'] ?? '—')) ?></td>
-            <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace"><?= $h((string) ($event['version'] ?? '')) ?></td>
-            <td style="padding:6px 10px"><?= $h((string) ($event['admin'] ?? '—')) ?></td>
-            <td style="padding:6px 10px;text-align:center">
-              <?php if ($isSelf): ?>
-                <span title="Self-update of Addon Manager + itself" style="color:#0ea5e9;font-weight:700">●</span>
-              <?php else: ?>
-                <span style="color:#cbd5e1">—</span>
-              <?php endif; ?>
-            </td>
-            <td style="padding:6px 10px;color:#64748b;font-size:11.5px"><?= $h(trim($detail)) ?></td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+      <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:6px">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead>
+            <tr style="background:#f8fafc;text-align:left;color:#1e293b;font-weight:600">
+              <th style="padding:8px 10px;white-space:nowrap">When</th>
+              <th style="padding:8px 10px;white-space:nowrap">Event</th>
+              <th style="padding:8px 10px;white-space:nowrap">Add-on</th>
+              <th style="padding:8px 10px;white-space:nowrap">Repo</th>
+              <th style="padding:8px 10px;white-space:nowrap">Version</th>
+              <th style="padding:8px 10px;white-space:nowrap">Admin</th>
+              <th style="padding:8px 10px;white-space:nowrap">Self?</th>
+              <th style="padding:8px 10px">Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($entries as $event):
+              $ts = (int) ($event['ts'] ?? 0);
+              $when = $ts > 0 ? date('Y-m-d H:i:s', $ts) : '?';
+              [$badgeStyle, $badgeText] = $eventBadge((string) ($event['event'] ?? '?'));
+              $isSelf = ! empty($event['is_self']);
+              $detail = '';
+              if (! empty($event['reason']))  $detail .= 'reason=' . $event['reason'] . ' ';
+              if (! empty($event['error']))   $detail .= 'error=' . substr($event['error'], 0, 120) . ' ';
+              if (! empty($event['source']))  $detail .= 'src=' . $event['source'] . ' ';
+              if (! empty($event['trust_state'])) $detail .= 'trust=' . $event['trust_state'] . ' ';
+              if (! empty($event['owner_id']))    $detail .= 'owner_id=' . $event['owner_id'] . ' ';
+              if (! empty($event['repo_id']))     $detail .= 'repo_id=' . $event['repo_id'] . ' ';
+            ?>
+            <tr style="border-top:1px solid #f1f5f9">
+              <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;color:#475569;white-space:nowrap"><?= $h($when) ?></td>
+              <td style="padding:6px 10px;white-space:nowrap">
+                <span style="padding:2px 7px;border-radius:3px;font-weight:700;font-size:11px;white-space:nowrap;<?= $h($badgeStyle) ?>"><?= $h($badgeText) ?></span>
+              </td>
+              <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;white-space:nowrap"><?= $h((string) ($event['short_name'] ?? '—')) ?></td>
+              <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;color:#475569;white-space:nowrap"><?= $h((string) ($event['repo'] ?? '—')) ?></td>
+              <td style="padding:6px 10px;font-family:ui-monospace,Menlo,monospace;white-space:nowrap"><?= $h((string) ($event['version'] ?? '')) ?></td>
+              <td style="padding:6px 10px;white-space:nowrap"><?= $h((string) ($event['admin'] ?? '—')) ?></td>
+              <td style="padding:6px 10px;text-align:center;white-space:nowrap">
+                <?php if ($isSelf): ?>
+                  <span title="Self-update of Addon Manager + itself" style="color:#0ea5e9;font-weight:700">●</span>
+                <?php else: ?>
+                  <span style="color:#cbd5e1">—</span>
+                <?php endif; ?>
+              </td>
+              <td style="padding:6px 10px;color:#64748b;font-size:11.5px;min-width:240px"><?= $h(trim($detail)) ?></td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
 
       <p class="addi-muted" style="font-size:12px;margin-top:12px">
         Showing the most recent <?= count($entries) ?> events. For longer
         history, grep the JSONL file at
         <code><?= $h($log_file) ?></code>:
       </p>
-      <pre style="background:#0f172a;color:#e2e8f0;padding:10px 14px;border-radius:6px;font-size:12px;font-family:ui-monospace,Menlo,monospace;line-height:1.6;overflow-x:auto;white-space:pre-wrap">grep '"event":"install_blocked"' <?= $h($log_file) ?>
-grep '"is_self":true' <?= $h($log_file) ?>
-grep '"short_name":"edge_cache_tags"' <?= $h($log_file) ?></pre>
+      <?php
+      // Build the grep recipes as a single string then echo once. The
+      // `<?= $h($log_file) ?>` interpolation + immediate newline trick
+      // gets bitten by PHP's "newline after ?> is consumed" rule,
+      // which collapsed all three lines into one when echoed inline.
+      $grepBlock = implode("\n", [
+          'grep \'"event":"install_blocked"\' ' . $log_file,
+          'grep \'"is_self":true\' ' . $log_file,
+          'grep \'"short_name":"edge_cache_tags"\' ' . $log_file,
+      ]);
+      ?>
+      <pre style="background:#0f172a;color:#e2e8f0;padding:10px 14px;border-radius:6px;font-size:12px;font-family:ui-monospace,Menlo,monospace;line-height:1.6;overflow-x:auto;white-space:pre"><?= $h($grepBlock) ?></pre>
     <?php endif; ?>
   </section>
 </div>
