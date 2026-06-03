@@ -9,9 +9,37 @@ class PackageInstaller
 {
     private string $addonsPath;
 
-    public function __construct(?string $addonsPath = null)
-    {
+    private ?UpdateSourceRegistry $sources = null;
+    private ?GitHubReleaseChecker $releases = null;
+
+    public function __construct(
+        ?string $addonsPath = null,
+        ?UpdateSourceRegistry $sources = null,
+        ?GitHubReleaseChecker $releases = null
+    ) {
         $this->addonsPath = rtrim($addonsPath ?: self::detectAddonsPath(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        $this->sources = $sources;
+        $this->releases = $releases;
+    }
+
+    private function sources(): UpdateSourceRegistry
+    {
+        if ($this->sources === null) {
+            $this->sources = function_exists('ee')
+                ? ee('addon_installer:updateSourceRegistry')
+                : new UpdateSourceRegistry(null, $this->addonsPath);
+        }
+        return $this->sources;
+    }
+
+    private function releases(): GitHubReleaseChecker
+    {
+        if ($this->releases === null) {
+            $this->releases = function_exists('ee')
+                ? ee('addon_installer:githubReleaseChecker')
+                : new GitHubReleaseChecker();
+        }
+        return $this->releases;
     }
 
     public static function detectAddonsPath(): string
@@ -72,6 +100,13 @@ class PackageInstaller
             $updateAvailable = $addon ? (bool) $addon->hasUpdate() : false;
             $settingsAvailable = $isInstalled && $addon && (bool) $addon->get('settings_exist');
 
+            // On-disk version drives the GitHub comparison even when the
+            // add-on isn't installed yet — that way "Not Installed but a
+            // newer GitHub release exists" still surfaces.
+            $diskVersion = $addon ? (string) $addon->getVersion() : (string) ($meta['version'] ?? '');
+
+            $remote = $this->resolveRemote($shortName, $diskVersion);
+
             $packages[] = [
                 'short_name' => $shortName,
                 'name' => $addon ? $addon->getName() : ($meta['name'] ?? $shortName),
@@ -82,6 +117,15 @@ class PackageInstaller
                 'is_installed' => $isInstalled,
                 'update_available' => $updateAvailable,
                 'settings_available' => $settingsAvailable,
+                'remote_repo' => $remote['repo'],
+                'remote_repo_source' => $remote['source'],
+                'remote_version' => $remote['version'],
+                'remote_release_url' => $remote['release_url'],
+                'remote_release_name' => $remote['release_name'],
+                'remote_published_at' => $remote['published_at'],
+                'remote_checked_at' => $remote['checked_at'],
+                'remote_update_available' => $remote['update_available'],
+                'remote_status' => $remote['status'],
                 'settings_url' => $settingsAvailable
                     ? ee('CP/URL')->make('addons/settings/' . $shortName)->compile()
                     : '',
@@ -108,6 +152,127 @@ class PackageInstaller
         });
 
         return $packages;
+    }
+
+    /**
+     * Resolve a single add-on against the configured release source. Returns
+     * a fully-populated remote_* block — fields are empty/null when no
+     * source is configured or no fresh cache entry exists. This method
+     * never makes HTTP calls; refresh() is the only path that hits GitHub.
+     *
+     * @return array{
+     *   repo:?string, source:?string, version:?string, release_url:?string,
+     *   release_name:?string, published_at:?string, checked_at:int,
+     *   update_available:bool, status:string
+     * }
+     */
+    public function resolveRemote(string $shortName, string $installedVersion): array
+    {
+        $empty = [
+            'repo' => null,
+            'source' => null,
+            'version' => null,
+            'release_url' => null,
+            'release_name' => null,
+            'published_at' => null,
+            'checked_at' => 0,
+            'update_available' => false,
+            // status ∈ {unconfigured, never_checked, stale, fresh, error}
+            'status' => 'unconfigured',
+        ];
+
+        $mapping = $this->sources()->resolve($shortName);
+        if ($mapping === null) {
+            return $empty;
+        }
+
+        $repo = $mapping['repo'];
+        $checker = $this->releases();
+        $checkedAt = $checker->lastCheckedAt($repo);
+        $cached = $checker->cached($repo);
+
+        if ($checkedAt === 0) {
+            return array_merge($empty, [
+                'repo' => $repo,
+                'source' => $mapping['source'],
+                'status' => 'never_checked',
+            ]);
+        }
+
+        if ($cached === null) {
+            // Cache exists but is a sentinel — last fetch failed.
+            return array_merge($empty, [
+                'repo' => $repo,
+                'source' => $mapping['source'],
+                'checked_at' => $checkedAt,
+                'status' => 'error',
+            ]);
+        }
+
+        $remoteVersion = (string) ($cached['version'] ?? '');
+        $isNewer = $remoteVersion !== ''
+            && $installedVersion !== ''
+            && GitHubReleaseChecker::isNewer($remoteVersion, $installedVersion);
+
+        return [
+            'repo' => $repo,
+            'source' => $mapping['source'],
+            'version' => $remoteVersion,
+            'release_url' => (string) ($cached['html_url'] ?? ''),
+            'release_name' => (string) ($cached['name'] ?? ''),
+            'published_at' => (string) ($cached['published_at'] ?? ''),
+            'checked_at' => $checkedAt,
+            'update_available' => $isNewer,
+            'status' => $checker->isStale($repo) ? 'stale' : 'fresh',
+        ];
+    }
+
+    /**
+     * Force a fresh GitHub fetch for every add-on with a configured source.
+     * Returns per-add-on outcomes so callers can show a useful summary.
+     *
+     * @return array<string,array{repo:string,ok:bool,version:?string}>
+     */
+    public function refreshAllReleases(): array
+    {
+        $checker = $this->releases();
+        $sources = $this->sources();
+        $results = [];
+
+        foreach (glob($this->addonsPath . '*', GLOB_ONLYDIR) ?: [] as $path) {
+            $setup = $path . DIRECTORY_SEPARATOR . 'addon.setup.php';
+            if (! is_file($setup)) {
+                continue;
+            }
+
+            $shortName = basename($path);
+            $mapping = $sources->resolve($shortName);
+            if ($mapping === null) {
+                continue;
+            }
+
+            $data = $checker->refresh($mapping['repo']);
+            $results[$shortName] = [
+                'repo' => $mapping['repo'],
+                'source' => $mapping['source'],
+                'ok' => $data !== null,
+                'version' => $data['version'] ?? null,
+            ];
+        }
+
+        return $results;
+    }
+
+    /** Count of installed-packages cards that currently flag an upstream update. */
+    public function remoteUpdateCount(): int
+    {
+        $count = 0;
+        foreach ($this->installedPackages() as $pkg) {
+            if (! empty($pkg['remote_update_available'])) {
+                $count++;
+            }
+        }
+        return $count;
     }
 
     public function installUploaded(array $file, bool $overwrite = false): array

@@ -125,11 +125,36 @@ Loose add-on files at the ZIP root are rejected because the installer cannot inf
 
 > Coming soon: update / install / settings actions.
 
+## Tracking GitHub Releases
+
+Addon Manager + can poll GitHub Releases for every installed add-on and surface
+a single "updates available" count in the EE CP sidebar — covering EE-store
+add-ons (the existing upload flow) AND add-ons distributed on GitHub.
+
+Two resolution layers, in priority order:
+
+1. **Author-declared.** Add `'github_repo' => 'owner/repo'` to the add-on's
+   `addon.setup.php`. Opt-in, decentralized, survives admin reinstall.
+2. **Admin-mapped.** Open **Addon Manager + → Releases** and fill in
+   `owner/repo` for any installed add-on whose author hasn't declared one.
+   Persisted to `system/user/config/addon_installer_mappings.json`.
+
+The Releases screen lists every installed add-on with its installed version,
+mapped repo, latest release, and last-check timestamp. Click **Check for
+updates** to refresh all mapped repos (12h cache, sentinel-on-failure so a
+flaky network doesn't hammer GitHub). The Packages screen swaps in a
+"GitHub: vX.Y.Z ↗" badge whenever a newer release exists.
+
+GitHub API calls are unauthenticated (public repos only). The 60-requests/hour
+unauthenticated quota per IP is far above any realistic site's add-on count.
+
 ## Roadmap
 
 - Remote package registry / URL install
 - Bulk install from a ZIP containing multiple add-ons
 - Improved version conflict UI
+- One-click "Install update from GitHub" (fetch + extract release zip, then
+  hand off to EE's native update flow)
 
 ## Changelog / Releases
 

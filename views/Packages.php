@@ -24,7 +24,15 @@ $csrfToken = $csrf_token ?? '';
                 <h3><?= $h($package['name'] ?? '') ?></h3>
                 <code><?= $h($package['short_name'] ?? '') ?></code>
               </div>
-              <?php if (! empty($package['update_available'])): ?>
+              <?php if (! empty($package['remote_update_available'])): ?>
+                <a class="addi-tag is-update"
+                   href="<?= $h($package['remote_release_url'] ?? '') ?>"
+                   target="_blank" rel="noopener"
+                   style="background:#f59e0b;color:#fff;text-decoration:none"
+                   title="A newer release exists on GitHub. Click to view release notes.">
+                  GitHub: v<?= $h($package['remote_version'] ?? '') ?> ↗
+                </a>
+              <?php elseif (! empty($package['update_available'])): ?>
                 <span class="addi-tag is-update">Update Available</span>
               <?php elseif (! empty($package['is_installed'])): ?>
                 <span class="addi-tag is-installed">Installed</span>

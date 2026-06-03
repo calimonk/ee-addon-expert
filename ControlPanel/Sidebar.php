@@ -31,10 +31,37 @@ class Sidebar extends AbstractSidebar
             ->withIcon('puzzle-piece')
             ->isActive(strpos($current, $this->base . 'packages') !== false);
 
+        // "Releases" entry — append "(N)" when GitHub flags pending updates.
+        // The sidebar widget doesn't render arbitrary badges, so the count
+        // is baked into the label. Inexpensive (cache-only, no HTTP).
+        $count = $this->remoteUpdateCount();
+        $releasesLabel = $count > 0
+            ? sprintf('Releases (%d)', $count)
+            : 'Releases';
+
+        $list->addItem($releasesLabel, $mk('releases'))
+            ->withIcon('cloud-download')
+            ->isActive(strpos($current, $this->base . 'releases') !== false);
+
         $list->addItem('Documentation', $mk('documentation'))
             ->withIcon('book')
             ->isActive(strpos($current, $this->base . 'documentation') !== false);
 
         ee()->view->sidebar = $sidebar->render();
+    }
+
+    /**
+     * Count of tracked add-ons that currently have a newer GitHub release
+     * than what's on disk. Reads cache only — no HTTP, no measurable load
+     * cost. Errors here must NEVER crash the sidebar, so anything thrown
+     * by the installer falls back to 0.
+     */
+    private function remoteUpdateCount(): int
+    {
+        try {
+            return (int) ee('addon_installer:packageInstaller')->remoteUpdateCount();
+        } catch (\Throwable $e) {
+            return 0;
+        }
     }
 }
