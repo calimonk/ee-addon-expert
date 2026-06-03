@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-06-03
+
+### Fixed
+- **Auto-finalize banner showed "X.Y.Z → X.Y.Z" instead of the actual
+  from→to versions.** `AutoFinalizer::finalizeOne()` was reading the
+  installed version at the END of the method via
+  `$addonInfo->getInstalledVersion()` — but by that point we'd
+  already saved the new version, so the read returned the
+  post-finalize value. Fixed by reading `from` out of the
+  module/extension parts we captured earlier in the method (which
+  hold the actual pre-save value).
+- **Audit Log grep recipes rendered as raw PHP source** instead of
+  shell commands. A `// <?= ... ?>` illustrative comment in the view
+  closed the PHP block — PHP single-line comments terminate at
+  newline OR at a closing tag, even when the tag is "inside" the
+  comment. The rest of the PHP code became literal HTML output.
+  Rewrote the comment to not contain a closing tag token.
+
 ## [1.4.1] - 2026-06-03
 
 ### Fixed

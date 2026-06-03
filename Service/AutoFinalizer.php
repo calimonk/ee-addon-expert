@@ -271,9 +271,19 @@ class AutoFinalizer
             return ['updated' => false, 'reason' => 'nothing_to_update'];
         }
 
+        // `from` reports the PRE-finalize installed version. Reading
+        // $addonInfo->getInstalledVersion() here would now return the
+        // POST-save value — we'd render "1.4.1 → 1.4.1" in the banner.
+        // Use the captured `from` value from the parts we actually
+        // mutated; module takes precedence over extension since the
+        // module is the user-facing version row in EE's UI.
+        $from = (string) ($parts['module']['from']
+            ?? $parts['extension']['from']
+            ?? '');
+
         return [
             'updated' => true,
-            'from'    => (string) $addonInfo->getInstalledVersion(),
+            'from'    => $from,
             'to'      => $newVersion,
             'parts'   => $parts,
         ];

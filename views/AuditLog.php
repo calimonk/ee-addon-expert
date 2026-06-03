@@ -103,10 +103,12 @@ $eventBadge = function (string $event) {
         <code><?= $h($log_file) ?></code>:
       </p>
       <?php
-      // Build the grep recipes as a single string then echo once. The
-      // `<?= $h($log_file) ?>` interpolation + immediate newline trick
-      // gets bitten by PHP's "newline after ?> is consumed" rule,
-      // which collapsed all three lines into one when echoed inline.
+      // Build the grep recipes as a single string then echo once.
+      // Inline interpolation got bitten by PHP eating newlines after
+      // a closing PHP tag; this avoids the issue entirely.
+      // (And no, you can't write literal closing-tag tokens in `//`
+      // comments — PHP treats them as the end of the PHP block, even
+      // inside what looks like a comment.)
       $grepBlock = implode("\n", [
           'grep \'"event":"install_blocked"\' ' . $log_file,
           'grep \'"is_self":true\' ' . $log_file,
