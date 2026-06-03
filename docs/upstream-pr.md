@@ -1,10 +1,5 @@
 # Upstream PR draft
 
-For `jfaza/addon-manager-plus`. Submit either as a PR description, or
-paste into an issue first if you want to align with upstream CONTRIBUTING
-before opening the diff.
-
----
 
 ## Title
 
