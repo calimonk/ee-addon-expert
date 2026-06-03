@@ -2,10 +2,12 @@
 $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $values     = $values ?? [];
 $csrfToken  = $csrf_token ?? '';
-$target     = (string) ($values['custom_menu_target'] ?? 'releases');
-$showCount  = ($values['custom_menu_show_count'] ?? 'y') === 'y';
-$showInMenu = ($values['show_in_custom_menu'] ?? 'y') === 'y';
-$menuLabel  = (string) ($values['custom_menu_label'] ?? 'Addons');
+$target       = (string) ($values['custom_menu_target'] ?? 'releases');
+$showCount    = ($values['custom_menu_show_count'] ?? 'y') === 'y';
+$showInMenu   = ($values['show_in_custom_menu'] ?? 'y') === 'y';
+$menuLabel    = (string) ($values['custom_menu_label'] ?? 'Addons');
+$autoFinalize = ($values['auto_finalize'] ?? 'y') === 'y';
+$lazyRefresh  = ($values['lazy_refresh'] ?? 'y') === 'y';
 ?>
 <div class="addi-wrap">
   <p class="addi-toolbar">
@@ -86,6 +88,35 @@ $menuLabel  = (string) ($values['custom_menu_label'] ?? 'Addons');
             Label becomes "<?= $h($menuLabel) ?> (3)" when there are pending
             GitHub updates. EE's Custom menu doesn't support badge widgets,
             so the count is embedded in the label text.
+          </div>
+        </label>
+      </fieldset>
+
+      <fieldset style="border:1px solid #e2e8f0;border-radius:6px;padding:14px 18px;margin:0 0 18px">
+        <legend style="padding:0 8px;font-weight:600;color:#1e293b">Automation</legend>
+
+        <label style="display:block;margin:8px 0 14px">
+          <input type="checkbox" name="auto_finalize" value="y" <?= $autoFinalize ? 'checked' : '' ?>>
+          <strong>Auto-finalize EE-side updates after one-click install</strong>
+          <div class="addi-muted" style="font-size:12px;margin-left:22px">
+            After the orange "Install vX.Y.Z" button swaps files on disk,
+            run EE's update flow (upd::update + DB version bump) on the
+            next CP request. Without this, you'd have to click "Update"
+            on the matching card under Developer → Add-Ons by hand for
+            every install. Failures are audit-logged and retried up to
+            3 times.
+          </div>
+        </label>
+
+        <label style="display:block;margin:8px 0 4px">
+          <input type="checkbox" name="lazy_refresh" value="y" <?= $lazyRefresh ? 'checked' : '' ?>>
+          <strong>Refresh stale release caches when loading the Releases screen</strong>
+          <div class="addi-muted" style="font-size:12px;margin-left:22px">
+            Every time you load the Releases screen, any mapping whose
+            release cache is older than 1h gets refreshed in parallel
+            (single round-trip via curl_multi). The explicit
+            "Check for updates" button still forces a full refresh.
+            Disable to keep the cache static between manual clicks.
           </div>
         </label>
       </fieldset>

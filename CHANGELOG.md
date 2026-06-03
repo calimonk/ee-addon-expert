@@ -6,6 +6,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-03
+
+### Added — Auto-finalize EE-side updates
+- After the one-click "Install vX.Y.Z" button swaps files on disk, the
+  installer writes a marker at
+  `system/user/cache/addon_installer/pending_finalize/{short}.json`.
+  On the very next CP request (the post-install redirect to our
+  Releases screen), `Service/AutoFinalizer` scans the markers and
+  runs EE's exact update flow per pending addon:
+
+    1. `ee('Addon')->get($short)` → addon info
+    2. `new {InstallerClass}()->update($currentVersion)` — runs the
+       addon's own `upd.php` migration code
+    3. Bump `exp_modules.module_version` via the EE Model API
+    4. Same for extension class + `exp_extensions.version` (if any)
+
+  Mirrors `Controller\Addons\Addons::update()` from EE 7.dev so
+  there's no semantic drift — what EE does for the native Update
+  button, we do via the marker. Self-updates of Addon Manager + work
+  cleanly because the finalize runs in a fresh request with the new
+  code loaded (not the in-memory pre-swap version).
+
+  Failures are capped at 3 retries per marker, audit-logged, and
+  surfaced as a red banner on the Releases screen.
+
+  Setting: **Auto-finalize EE-side updates after one-click install**
+  (default ON). Off reverts to the manual "click Update on
+  Developer → Add-Ons" flow.
+
+### Added — Lazy parallel release refresh
+- Release-cache TTL dropped from **12h → 1h**. Combined with the new
+  lazy refresh, an admin who visits the Releases screen once a day
+  always sees current data.
+- Loading the Releases screen now refreshes any stale cache entries
+  in parallel via `curl_multi` — single round-trip total, bounded by
+  the slowest single GitHub fetch (~4s ceiling), regardless of how
+  many mappings you have.
+- Setting: **Refresh stale release caches when loading the Releases
+  screen** (default ON). Off keeps the cache static until the
+  explicit "Check for updates" button is clicked.
+
+### Internal
+- New `Service/AutoFinalizer` with the marker/finalize logic.
+- `GitHubReleaseChecker::refreshMultiple()` for `curl_multi`-backed
+  parallel fetches; falls back to sequential when cURL multi isn't
+  available.
+- `ReleaseInstaller::__construct` gains an optional `AutoFinalizer`
+  arg; `addon.setup.php` registers the new singleton.
+
 ## [1.3.5] - 2026-06-03
 
 ### Changed

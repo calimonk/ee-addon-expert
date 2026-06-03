@@ -57,7 +57,7 @@ class Addon_installer_upd extends Installer
         if ($existing > 0) {
             ee()->db
                 ->where('class', 'Addon_installer_ext')
-                ->update('extensions', ['version' => '1.3.5']);
+                ->update('extensions', ['version' => '1.4.0']);
             return;
         }
 
@@ -67,7 +67,7 @@ class Addon_installer_upd extends Installer
             'hook'     => 'cp_custom_menu',
             'settings' => '',
             'priority' => 10,
-            'version'  => '1.3.5',
+            'version'  => '1.4.0',
             'enabled'  => 'y',
         ]);
     }

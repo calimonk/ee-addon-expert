@@ -14,8 +14,12 @@ namespace JavidFazaeli\AddonInstaller\Service;
  */
 class GitHubReleaseChecker
 {
-    /** Seconds between live fetches for the same repo. */
-    private const TTL_SECONDS = 12 * 3600;
+    /**
+     * Seconds between live fetches for the same repo. Short enough that
+     * a daily-CP-visit admin always gets fresh data; long enough that
+     * cache absorbs rapid CP navigation without hammering GitHub.
+     */
+    private const TTL_SECONDS = 3600;
 
     /** Repo-identity cache TTL. Identity changes rarely; weekly is fine. */
     private const IDENTITY_TTL_SECONDS = 7 * 24 * 3600;
@@ -115,6 +119,134 @@ class GitHubReleaseChecker
             return $this->cached($ownerRepo);
         }
         return $this->refresh($ownerRepo);
+    }
+
+    /**
+     * Refresh many repos in parallel via curl_multi. Whole batch
+     * completes within a single round-trip (limited by the slowest
+     * response or HTTP_TIMEOUT, whichever comes first), not N
+     * round-trips like sequential refresh() calls.
+     *
+     * Sentinel-on-failure semantics are preserved per repo — a failure
+     * to fetch ownerA doesn't affect the cache entry for ownerB. The
+     * caller gets back a [ownerRepo => ?array] map matching the input.
+     *
+     * Falls back to sequential refresh() calls if cURL multi isn't
+     * available (e.g. PHP without curl extension).
+     *
+     * @param string[] $ownerRepos
+     * @return array<string,?array>
+     */
+    public function refreshMultiple(array $ownerRepos): array
+    {
+        $ownerRepos = array_values(array_unique(array_filter(
+            $ownerRepos,
+            [self::class, 'isValidRepo']
+        )));
+
+        if (empty($ownerRepos)) {
+            return [];
+        }
+
+        if (! function_exists('curl_multi_init')) {
+            $out = [];
+            foreach ($ownerRepos as $r) {
+                $out[$r] = $this->refresh($r);
+            }
+            return $out;
+        }
+
+        $this->ensureCacheDir();
+
+        $mh = curl_multi_init();
+        $handles = [];
+
+        foreach ($ownerRepos as $r) {
+            $ch = curl_init('https://api.github.com/repos/' . $r . '/releases/latest');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => self::HTTP_TIMEOUT,
+                CURLOPT_CONNECTTIMEOUT => self::HTTP_TIMEOUT,
+                CURLOPT_USERAGENT      => self::USER_AGENT,
+                CURLOPT_HTTPHEADER     => [
+                    'Accept: application/vnd.github+json',
+                    'X-GitHub-Api-Version: 2022-11-28',
+                ],
+            ]);
+            curl_multi_add_handle($mh, $ch);
+            $handles[$r] = $ch;
+        }
+
+        // Run all transfers until done — curl_multi_exec returns
+        // CURLM_OK once nothing's running. Modern PHP (>=7.2) supports
+        // curl_multi_select to avoid the spin-loop.
+        do {
+            $status = curl_multi_exec($mh, $running);
+            if ($running > 0) {
+                curl_multi_select($mh, 1.0);
+            }
+        } while ($running > 0 && $status === CURLM_OK);
+
+        $results = [];
+        foreach ($handles as $r => $ch) {
+            $body = curl_multi_getcontent($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+
+            $data = $this->parseReleaseBody($code, $body);
+
+            @file_put_contents(
+                $this->cacheFile($r),
+                json_encode($data ?: ['_empty' => time()])
+            );
+
+            $results[$r] = $data;
+        }
+
+        curl_multi_close($mh);
+        return $results;
+    }
+
+    /**
+     * Parse a release-API response body into our cache shape. Returns
+     * null on any failure (caller writes the empty sentinel).
+     */
+    private function parseReleaseBody(int $code, $body): ?array
+    {
+        if ($code !== 200 || ! is_string($body) || $body === '') {
+            return null;
+        }
+        $decoded = json_decode($body, true);
+        if (! is_array($decoded) || empty($decoded['tag_name'])) {
+            return null;
+        }
+
+        $assets = [];
+        foreach ((array) ($decoded['assets'] ?? []) as $asset) {
+            if (! is_array($asset)) continue;
+            $name = (string) ($asset['name'] ?? '');
+            $url  = (string) ($asset['browser_download_url'] ?? '');
+            if ($name === '' || $url === '') continue;
+            $assets[] = [
+                'name'         => $name,
+                'url'          => $url,
+                'size'         => (int) ($asset['size'] ?? 0),
+                'content_type' => (string) ($asset['content_type'] ?? ''),
+            ];
+        }
+
+        return [
+            'tag'          => (string) $decoded['tag_name'],
+            'version'      => ltrim((string) $decoded['tag_name'], 'vV'),
+            'name'         => (string) ($decoded['name'] ?? $decoded['tag_name']),
+            'html_url'     => (string) ($decoded['html_url'] ?? ''),
+            'published_at' => (string) ($decoded['published_at'] ?? ''),
+            'body'         => (string) ($decoded['body'] ?? ''),
+            'zipball_url'  => (string) ($decoded['zipball_url'] ?? ''),
+            'assets'       => $assets,
+            'fetched_at'   => time(),
+        ];
     }
 
     /** Forget the cache entry for $ownerRepo. */

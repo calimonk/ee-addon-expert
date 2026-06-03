@@ -1,5 +1,6 @@
 <?php
 
+use JavidFazaeli\AddonInstaller\Service\AutoFinalizer;
 use JavidFazaeli\AddonInstaller\Service\GitHubReleaseChecker;
 use JavidFazaeli\AddonInstaller\Service\InstallAuditor;
 use JavidFazaeli\AddonInstaller\Service\PackageInstaller;
@@ -11,7 +12,7 @@ use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
 return [
     'name'              => 'Addon Manager +',
     'description'       => 'Manage ExpressionEngine add-ons from ZIP packages through the control panel.',
-    'version'           => '1.3.5',
+    'version'           => '1.4.0',
     'author'            => 'Javid Fazaeli',
     'author_url'        => 'https://fazaeli.dev',
     'namespace'         => 'JavidFazaeli\AddonInstaller',
@@ -48,12 +49,21 @@ return [
         'SettingsStore' => function($addon) {
             return ee('addon_installer:settingsStore');
         },
+        'autoFinalizer' => function($addon) {
+            return new AutoFinalizer(
+                ee('addon_installer:installAuditor')
+            );
+        },
+        'AutoFinalizer' => function($addon) {
+            return ee('addon_installer:autoFinalizer');
+        },
         'releaseInstaller' => function($addon) {
             return new ReleaseInstaller(
                 null,
                 ee('addon_installer:githubReleaseChecker'),
                 ee('addon_installer:trustStore'),
-                ee('addon_installer:installAuditor')
+                ee('addon_installer:installAuditor'),
+                ee('addon_installer:autoFinalizer')
             );
         },
         'ReleaseInstaller' => function($addon) {

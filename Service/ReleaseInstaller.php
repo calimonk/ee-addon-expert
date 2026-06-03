@@ -44,12 +44,14 @@ class ReleaseInstaller
     private GitHubReleaseChecker $checker;
     private TrustStore $trust;
     private InstallAuditor $auditor;
+    private ?AutoFinalizer $finalizer;
 
     public function __construct(
         ?string $addonsPath = null,
         ?GitHubReleaseChecker $checker = null,
         ?TrustStore $trust = null,
-        ?InstallAuditor $auditor = null
+        ?InstallAuditor $auditor = null,
+        ?AutoFinalizer $finalizer = null
     ) {
         $this->addonsPath = rtrim(
             $addonsPath ?: PackageInstaller::detectAddonsPath(),
@@ -59,6 +61,7 @@ class ReleaseInstaller
         $this->checker = $checker ?: new GitHubReleaseChecker();
         $this->trust   = $trust ?: new TrustStore();
         $this->auditor = $auditor ?: new InstallAuditor();
+        $this->finalizer = $finalizer;
     }
 
     /**
@@ -216,6 +219,23 @@ class ReleaseInstaller
         // of some other addon" — historically the former has been the
         // higher-risk case.
         $isSelf = $shortName === 'addon_installer';
+
+        // Schedule the EE-side finalize. The actual upd::update() +
+        // version-bump happens on the NEXT request — for self-update
+        // that means PHP loads the new upd class fresh, instead of
+        // running the in-memory old version. For other addons it
+        // happens whenever the user next loads our Releases screen
+        // (which is the immediate post-install redirect target).
+        try {
+            $this->finalizer()->schedule(
+                $shortName,
+                $isSelf ? 'unknown' : (function_exists('ee') ? (string) (ee('Addon')->get($shortName)->getInstalledVersion() ?? '') : ''),
+                (string) ($release['version'] ?? '')
+            );
+        } catch (\Throwable $e) {
+            // Marker write failure is non-fatal — admin can finalize
+            // manually via EE's native Update prompt.
+        }
 
         $this->auditor->record([
             'event' => 'install_ok',
@@ -635,6 +655,17 @@ class ReleaseInstaller
         $this->invalidateOpcache($targetPath);
 
         return $backupPath;
+    }
+
+    /** Lazy-construct the AutoFinalizer (uses DI if available). */
+    private function finalizer(): AutoFinalizer
+    {
+        if ($this->finalizer === null) {
+            $this->finalizer = function_exists('ee')
+                ? ee('addon_installer:autoFinalizer')
+                : new AutoFinalizer($this->auditor);
+        }
+        return $this->finalizer;
     }
 
     /** Per-short_name backup directory root, outside addon discovery. */

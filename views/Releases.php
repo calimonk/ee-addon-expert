@@ -1,9 +1,10 @@
 <?php
 $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$packages      = $packages ?? [];
-$adminMap      = $admin_map ?? [];
-$csrfToken     = $csrf_token ?? '';
-$updatesCount  = (int) ($updates_count ?? 0);
+$packages       = $packages ?? [];
+$adminMap       = $admin_map ?? [];
+$csrfToken      = $csrf_token ?? '';
+$updatesCount   = (int) ($updates_count ?? 0);
+$finalizeResults = $finalize_results ?? null;
 
 $fmtAge = function (int $ts): string {
     if ($ts <= 0) return 'never';
@@ -20,6 +21,36 @@ $fmtAge = function (int $ts): string {
     <a class="button button--default" href="<?= $h($docs_url) ?>">Documentation</a>
     <a class="button button--default" href="<?= $h($manager_url) ?>">Add-on Manager</a>
   </p>
+
+  <?php if ($finalizeResults !== null && (! empty($finalizeResults['finalized']) || ! empty($finalizeResults['failed']))): ?>
+    <section class="addi-card" style="margin-bottom:16px;border-left:4px solid <?= ! empty($finalizeResults['failed']) ? '#dc2626' : '#16a34a' ?>">
+      <h3 style="margin:0 0 8px;font-size:14px">Auto-finalize results</h3>
+      <?php if (! empty($finalizeResults['finalized'])): ?>
+        <p style="margin:4px 0;font-size:13px">
+          <strong style="color:#166534">Finalized:</strong>
+          <?php foreach ($finalizeResults['finalized'] as $short => $info): ?>
+            <code style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:3px;margin-right:4px">
+              <?= $h($short) ?>
+              <?php if (! empty($info['from']) && ! empty($info['to'])): ?>
+                <?= $h($info['from']) ?>&nbsp;→&nbsp;<?= $h($info['to']) ?>
+              <?php endif; ?>
+            </code>
+          <?php endforeach; ?>
+          <span class="addi-muted" style="font-size:12px;margin-left:4px">— DB versions bumped, migrations run.</span>
+        </p>
+      <?php endif; ?>
+      <?php if (! empty($finalizeResults['failed'])): ?>
+        <p style="margin:4px 0;font-size:13px">
+          <strong style="color:#991b1b">Failed:</strong>
+          <?php foreach ($finalizeResults['failed'] as $short => $info): ?>
+            <code style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:3px;margin-right:4px;font-size:12px"><?= $h($short) ?></code>
+            <span style="font-size:12px;color:#991b1b">attempt <?= (int) $info['attempts'] ?>/3 — <?= $h(substr((string) $info['error'], 0, 140)) ?></span><br>
+          <?php endforeach; ?>
+          <span class="addi-muted" style="font-size:12px">Will retry on next page load. Or finalize manually via Developer → Add-Ons.</span>
+        </p>
+      <?php endif; ?>
+    </section>
+  <?php endif; ?>
 
   <section class="addi-card">
     <h2>GitHub Release Tracking</h2>

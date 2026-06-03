@@ -33,8 +33,41 @@ class Releases extends AbstractRoute
         $releaseInstaller = ee('addon_installer:releaseInstaller');
         $trust            = ee('addon_installer:trustStore');
         $auditor          = ee('addon_installer:installAuditor');
+        $finalizer        = ee('addon_installer:autoFinalizer');
+        $settings         = ee('addon_installer:settingsStore');
 
         $selfUrl = ee('CP/URL')->make('addons/settings/addon_installer/releases');
+
+        // ---- Auto-finalize pending EE-side updates ----
+        // Any release the installer recently swapped on disk has a
+        // marker file waiting; finalize them now so the admin doesn't
+        // have to navigate to Developer → Add-Ons and click each
+        // Update prompt by hand. Setting can disable this.
+        $finalizeResults = null;
+        if ($settings->get('auto_finalize') === 'y') {
+            try {
+                $pending = $finalizer->pending();
+                if (! empty($pending)) {
+                    $finalizeResults = $finalizer->finalizeAllPending();
+                }
+            } catch (\Throwable $e) {
+                // Never let finalize errors block the screen.
+            }
+        }
+
+        // ---- Lazy refresh of stale release caches ----
+        // On-view parallel refresh of any mapping whose cache is older
+        // than the release TTL. Single round-trip via curl_multi; total
+        // wait time = slowest single fetch (~4s ceiling), not N * 4s.
+        // The explicit "Check for updates" button still forces a full
+        // refresh of every mapping.
+        if ($settings->get('lazy_refresh') === 'y') {
+            try {
+                $this->lazyRefreshStaleReleases($installer, $registry, $checker);
+            } catch (\Throwable $e) {
+                // Refresh failures must never break the screen render.
+            }
+        }
 
         // POST: explicit "reconfirm trust" — admin has reviewed the
         // identity change on GitHub and accepted it. We re-fetch the
@@ -218,18 +251,38 @@ class Releases extends AbstractRoute
         }
 
         $this->setBody('Releases', [
-            'packages'      => $packages,
-            'admin_map'     => $adminMap,
-            'updates_count' => $updatesCount,
-            'refresh_url'   => $selfUrl->compile(),
-            'save_url'      => $selfUrl->compile(),
-            'csrf_token'    => $installer->csrfToken(),
-            'manager_url'   => ee('CP/URL')->make('addons')->compile(),
-            'packages_url'  => ee('CP/URL')->make('addons/settings/addon_installer/packages')->compile(),
-            'audit_url'     => ee('CP/URL')->make('addons/settings/addon_installer/audit-log')->compile(),
-            'docs_url'      => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
+            'packages'         => $packages,
+            'admin_map'        => $adminMap,
+            'updates_count'    => $updatesCount,
+            'refresh_url'      => $selfUrl->compile(),
+            'save_url'         => $selfUrl->compile(),
+            'csrf_token'       => $installer->csrfToken(),
+            'manager_url'      => ee('CP/URL')->make('addons')->compile(),
+            'packages_url'     => ee('CP/URL')->make('addons/settings/addon_installer/packages')->compile(),
+            'audit_url'        => ee('CP/URL')->make('addons/settings/addon_installer/audit-log')->compile(),
+            'docs_url'         => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
+            'finalize_results' => $finalizeResults,
         ]);
 
         return $this;
+    }
+
+    /**
+     * Refresh any release-cache entry older than the TTL in parallel.
+     * No-op when nothing's stale (cheap on every page load).
+     */
+    private function lazyRefreshStaleReleases($installer, $registry, $checker): void
+    {
+        $packages = $installer->installedPackages();
+        $stale = [];
+        foreach ($packages as $pkg) {
+            $repo = (string) ($pkg['remote_repo'] ?? '');
+            if ($repo === '') continue;
+            if (! $checker->isStale($repo)) continue;
+            $stale[$repo] = true;
+        }
+        if (empty($stale)) return;
+
+        $checker->refreshMultiple(array_keys($stale));
     }
 }

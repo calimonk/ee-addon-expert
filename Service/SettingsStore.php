@@ -32,6 +32,21 @@ class SettingsStore
         // pending-count setting is on AND there are pending updates,
         // we append " (N)" — so "Addons" → "Addons (3)".
         'custom_menu_label' => 'Addons',
+
+        // Auto-finalize after a successful one-click install. When ON,
+        // a marker file is written by the installer; the next visit to
+        // the Releases screen runs EE's update flow (`upd::update()` +
+        // bump `module_version` / `extension_version` via the Model
+        // API) so the admin doesn't need to navigate to Developer →
+        // Add-Ons and click Update manually. OFF reverts to the
+        // explicit "click EE's Update prompt yourself" flow.
+        'auto_finalize' => 'y',
+
+        // Lazy refresh on view. When ON, loading the Releases screen
+        // refreshes any release-cache entries older than the release
+        // TTL in parallel (curl_multi). OFF keeps the cache static
+        // until the admin clicks "Check for updates" manually.
+        'lazy_refresh' => 'y',
     ];
 
     private string $file;
@@ -79,6 +94,8 @@ class SettingsStore
             switch ($key) {
                 case 'show_in_custom_menu':
                 case 'custom_menu_show_count':
+                case 'auto_finalize':
+                case 'lazy_refresh':
                     $clean[$key] = (string) $value === 'y' ? 'y' : 'n';
                     break;
                 case 'custom_menu_target':
