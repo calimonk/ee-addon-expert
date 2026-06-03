@@ -68,6 +68,26 @@ $csrfToken = $csrf_token ?? '';
                   </button>
                 </form>
               <?php endif; ?>
+              <?php if (! empty($package['remote_update_available']) && ! empty($package['remote_install_url'])): ?>
+                <form class="addi-inline-form"
+                      method="post"
+                      action="<?= $h($package['remote_install_url']) ?>"
+                      onsubmit="return confirm('Download and replace <?= $h($package['name'] ?? 'this add-on') ?> with the latest GitHub release (v<?= $h($package['remote_version'] ?? '') ?>)? The previous version will be kept as a backup.');">
+                  <?php if ($csrfToken !== ''): ?>
+                    <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
+                    <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
+                  <?php endif; ?>
+                  <input type="hidden" name="install_release" value="1">
+                  <input type="hidden" name="short_name" value="<?= $h($package['short_name'] ?? '') ?>">
+                  <button class="button button--primary addi-icon-button"
+                          type="submit"
+                          style="background:#f59e0b;border-color:#f59e0b"
+                          title="Update <?= $h($package['name'] ?? 'add-on') ?> from GitHub (v<?= $h($package['remote_version'] ?? '') ?>)"
+                          aria-label="Update <?= $h($package['name'] ?? 'add-on') ?> from GitHub">
+                    <i class="fal fa-cloud-download-alt" aria-hidden="true"></i>
+                  </button>
+                </form>
+              <?php endif; ?>
               <?php if (! empty($package['update_available']) && ! empty($package['update_url'])): ?>
                 <form class="addi-inline-form" method="post" action="<?= $h($package['update_url']) ?>">
                   <?php if ($csrfToken !== ''): ?>

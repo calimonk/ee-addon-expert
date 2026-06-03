@@ -145,6 +145,32 @@ updates** to refresh all mapped repos (12h cache, sentinel-on-failure so a
 flaky network doesn't hammer GitHub). The Packages screen swaps in a
 "GitHub: vX.Y.Z ↗" badge whenever a newer release exists.
 
+### One-click update from GitHub
+
+When a newer release is detected, an orange cloud-download button appears
+on the Packages card (and an "Install vX.Y.Z" button on the Releases row).
+Clicking it:
+
+1. Re-fetches the latest release from the GitHub API.
+2. Picks a download URL — preferring release assets named after the
+   add-on (`{short_name}-{version}.zip`), then any `.zip` asset, then
+   the auto-generated `zipball_url` (source archive).
+3. Streams the archive to a temp file, capped at 100 MB.
+4. Extracts into a staging directory next to the add-on, applying the
+   same `..` / absolute-path safety filter the upload flow uses.
+5. Locates the add-on subtree inside the zip by finding the
+   `addon.setup.php` whose parent folder matches `short_name`. Falls
+   back to the wrapper root for single-add-on source zipballs.
+6. Renames the existing add-on to `.{short_name}.backup.{ts}` (only one
+   backup is kept — older backups are removed first).
+7. Renames the staging dir into place.
+8. Forgets the release cache so the new on-disk version is read fresh.
+9. Redirects to EE's native **Update Add-on** screen so any migration
+   step is consciously approved by the admin.
+
+If anything fails, the previous version stays in place (or is restored
+from backup), and the failure surfaces as a CP banner.
+
 GitHub API calls are unauthenticated (public repos only). The 60-requests/hour
 unauthenticated quota per IP is far above any realistic site's add-on count.
 
@@ -153,8 +179,8 @@ unauthenticated quota per IP is far above any realistic site's add-on count.
 - Remote package registry / URL install
 - Bulk install from a ZIP containing multiple add-ons
 - Improved version conflict UI
-- One-click "Install update from GitHub" (fetch + extract release zip, then
-  hand off to EE's native update flow)
+- Optional authenticated GitHub calls (PAT) for sites that pin private
+  forks of add-ons
 
 ## Changelog / Releases
 

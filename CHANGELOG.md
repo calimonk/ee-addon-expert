@@ -11,10 +11,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   its `addon.setup.php` or via a new admin-mapped table on the new
   **Releases** screen. The Packages screen surfaces a "GitHub: vX.Y.Z ↗"
   badge when a newer release exists, and the sidebar shows a global count.
+- Add one-click update from GitHub. When a newer release is detected, the
+  Packages card and Releases row both render a button that downloads the
+  release zip, safe-extracts into a staging directory, snapshots the
+  existing add-on as `.{short_name}.backup.{ts}`, swaps the new version
+  into place, and hands off to EE's native update screen so migration
+  approval stays with the admin.
 - Add `Service/GitHubReleaseChecker` (12h on-disk cache,
-  sentinel-on-failure) and `Service/UpdateSourceRegistry`.
-- Add `ControlPanel/Routes/Releases` (manage mappings + "Check for updates"
-  button).
+  sentinel-on-failure), `Service/UpdateSourceRegistry`, and
+  `Service/ReleaseInstaller` (100 MB download cap, atomic swap, single
+  rolling backup).
+- Add `ControlPanel/Routes/Releases` (manage mappings, "Check for
+  updates" button, and `install_release` POST handler).
 
 ## [1.1.0] - 2026-04-30
 - Added uninstall action for installed add-ons.

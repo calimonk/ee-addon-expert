@@ -4,6 +4,7 @@ namespace JavidFazaeli\AddonInstaller\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
 use JavidFazaeli\AddonInstaller\Service\GitHubReleaseChecker;
+use JavidFazaeli\AddonInstaller\Service\ReleaseInstaller;
 use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
 
 class Releases extends AbstractRoute
@@ -26,11 +27,68 @@ class Releases extends AbstractRoute
         $this->addBreadcrumb('releases', 'Releases');
         $this->loadStyle();
 
-        $installer = ee('addon_installer:packageInstaller');
-        $registry  = ee('addon_installer:updateSourceRegistry');
-        $checker   = ee('addon_installer:githubReleaseChecker');
+        $installer        = ee('addon_installer:packageInstaller');
+        $registry         = ee('addon_installer:updateSourceRegistry');
+        $checker          = ee('addon_installer:githubReleaseChecker');
+        $releaseInstaller = ee('addon_installer:releaseInstaller');
 
         $selfUrl = ee('CP/URL')->make('addons/settings/addon_installer/releases');
+
+        // POST: install/update an add-on from its mapped GitHub release.
+        // Routed to here from both the Packages and Releases screens so
+        // there's a single code path for the one-click flow. On success
+        // we hand off to EE's native update screen so the admin still
+        // explicitly approves any migration steps.
+        if (ee('Request')->isPost() && ee()->input->post('install_release')) {
+            $shortName = (string) ee()->input->post('short_name');
+            $shortName = preg_match('#^[a-z0-9_]+$#', $shortName) ? $shortName : '';
+
+            if ($shortName === '') {
+                ee('CP/Alert')->makeBanner('addon-installer-release-install')
+                    ->asIssue()
+                    ->withTitle('Update failed')
+                    ->addToBody('Missing or malformed short_name.')
+                    ->defer();
+                ee()->functions->redirect($selfUrl);
+            }
+
+            $mapping = $registry->resolve($shortName);
+            if ($mapping === null) {
+                ee('CP/Alert')->makeBanner('addon-installer-release-install')
+                    ->asIssue()
+                    ->withTitle('Update failed')
+                    ->addToBody('No GitHub source is configured for ' . $shortName . '.')
+                    ->defer();
+                ee()->functions->redirect($selfUrl);
+            }
+
+            try {
+                $result = $releaseInstaller->installLatestRelease($shortName, $mapping['repo']);
+
+                ee('CP/Alert')->makeBanner('addon-installer-release-install')
+                    ->asSuccess()
+                    ->withTitle('Release installed')
+                    ->addToBody(sprintf(
+                        '%s v%s was extracted from %s. Run the EE update step to apply migrations.',
+                        $shortName,
+                        $result['version'] !== '' ? $result['version'] : 'latest',
+                        $result['source']
+                    ))
+                    ->defer();
+
+                // Hand off to EE's native update screen so the admin
+                // consciously approves any migrations the new version
+                // declares. EE will redirect back to /packages on success.
+                ee()->functions->redirect($result['update_url']);
+            } catch (\Throwable $e) {
+                ee('CP/Alert')->makeBanner('addon-installer-release-install')
+                    ->asIssue()
+                    ->withTitle('Update failed')
+                    ->addToBody($e->getMessage())
+                    ->defer();
+                ee()->functions->redirect($selfUrl);
+            }
+        }
 
         // POST: refresh all known release feeds.
         if (ee('Request')->isPost() && ee()->input->post('refresh_releases')) {

@@ -2,6 +2,7 @@
 
 use JavidFazaeli\AddonInstaller\Service\GitHubReleaseChecker;
 use JavidFazaeli\AddonInstaller\Service\PackageInstaller;
+use JavidFazaeli\AddonInstaller\Service\ReleaseInstaller;
 use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
 
 return [
@@ -25,6 +26,15 @@ return [
         },
         'UpdateSourceRegistry' => function($addon) {
             return ee('addon_installer:updateSourceRegistry');
+        },
+        'releaseInstaller' => function($addon) {
+            return new ReleaseInstaller(
+                null,
+                ee('addon_installer:githubReleaseChecker')
+            );
+        },
+        'ReleaseInstaller' => function($addon) {
+            return ee('addon_installer:releaseInstaller');
         },
         'packageInstaller' => function($addon) {
             return new PackageInstaller(

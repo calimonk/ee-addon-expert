@@ -137,7 +137,24 @@ $fmtAge = function (int $ts): string {
                 <?= $h($fmtAge($checkedAt)) ?>
               </td>
               <td style="padding:8px 12px;font-size:12px">
-                <?php if (! empty($pkg['remote_update_available'])): ?>
+                <?php if (! empty($pkg['remote_update_available']) && ! empty($pkg['remote_install_url'])): ?>
+                  <form method="post"
+                        action="<?= $h($pkg['remote_install_url']) ?>"
+                        style="margin:0"
+                        onsubmit="return confirm('Download and replace <?= $h($name) ?> with v<?= $h($remoteVer) ?> from GitHub? The previous version will be kept as a backup.');">
+                    <?php if ($csrfToken !== ''): ?>
+                      <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
+                      <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
+                    <?php endif; ?>
+                    <input type="hidden" name="install_release" value="1">
+                    <input type="hidden" name="short_name" value="<?= $h($short) ?>">
+                    <button type="submit"
+                            style="background:#f59e0b;color:#fff;border:0;padding:4px 10px;border-radius:3px;font-weight:600;font-size:12px;cursor:pointer">
+                      <i class="fal fa-cloud-download-alt" aria-hidden="true"></i>
+                      Install v<?= $h($remoteVer) ?>
+                    </button>
+                  </form>
+                <?php elseif (! empty($pkg['remote_update_available'])): ?>
                   <span style="background:#f59e0b;color:#fff;padding:3px 8px;border-radius:3px;font-weight:600">Update available</span>
                 <?php else: ?>
                   <?= $h($statusLabel) ?>

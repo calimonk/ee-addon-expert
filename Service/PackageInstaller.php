@@ -86,6 +86,7 @@ class PackageInstaller
     {
         $packages = [];
         $returnUrl = ee('CP/URL')->make('addons/settings/addon_installer/packages')->encode();
+        $releasesPostUrl = ee('CP/URL')->make('addons/settings/addon_installer/releases')->compile();
 
         foreach (glob($this->addonsPath . '*', GLOB_ONLYDIR) ?: [] as $path) {
             $setup = $path . DIRECTORY_SEPARATOR . 'addon.setup.php';
@@ -126,6 +127,9 @@ class PackageInstaller
                 'remote_checked_at' => $remote['checked_at'],
                 'remote_update_available' => $remote['update_available'],
                 'remote_status' => $remote['status'],
+                // POST target for the "Update from GitHub" button. Empty
+                // when no repo is configured for this short_name.
+                'remote_install_url' => $remote['repo'] !== null ? $releasesPostUrl : '',
                 'settings_url' => $settingsAvailable
                     ? ee('CP/URL')->make('addons/settings/' . $shortName)->compile()
                     : '',

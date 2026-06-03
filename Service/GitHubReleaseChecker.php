@@ -210,6 +210,27 @@ class GitHubReleaseChecker
             return null;
         }
 
+        // Keep only the asset fields we actually consume — the release
+        // payload can be very large (~tens of KB) and we don't want to
+        // dump it all into the cache file.
+        $assets = [];
+        foreach ((array) ($decoded['assets'] ?? []) as $asset) {
+            if (! is_array($asset)) {
+                continue;
+            }
+            $name = (string) ($asset['name'] ?? '');
+            $url  = (string) ($asset['browser_download_url'] ?? '');
+            if ($name === '' || $url === '') {
+                continue;
+            }
+            $assets[] = [
+                'name'         => $name,
+                'url'          => $url,
+                'size'         => (int) ($asset['size'] ?? 0),
+                'content_type' => (string) ($asset['content_type'] ?? ''),
+            ];
+        }
+
         return [
             'tag'          => (string) $decoded['tag_name'],
             'version'      => ltrim((string) $decoded['tag_name'], 'vV'),
@@ -217,6 +238,8 @@ class GitHubReleaseChecker
             'html_url'     => (string) ($decoded['html_url'] ?? ''),
             'published_at' => (string) ($decoded['published_at'] ?? ''),
             'body'         => (string) ($decoded['body'] ?? ''),
+            'zipball_url'  => (string) ($decoded['zipball_url'] ?? ''),
+            'assets'       => $assets,
             'fetched_at'   => time(),
         ];
     }
