@@ -6,6 +6,59 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-06-03
+
+### Fixed
+- **Self-update of Addon Manager + via the one-click flow left the site
+  with a fatal autoloader collision** (`Class "TrustStore" not found` /
+  similar). Root cause: the previous installer wrote post-install
+  backups to `system/user/addons/.{short}.backup.{ts}/`, which EE's
+  PSR-4 discovery walked and registered as a second source for our
+  namespace. The 1.2.0 backup then shadowed the 1.3.0 live code in the
+  class loader.
+- **Post-install redirect to `addons/update/{short}` returned 403**.
+  EE 7's update endpoint is POST-only; a GET redirect from inside our
+  installer was always going to fail.
+
+### Changed
+- **Backups now live in `system/user/cache/addon_installer/backups/{short}/{ts}/`**,
+  outside addon discovery. No collision risk regardless of how EE walks
+  the addons directory.
+- **Post-install redirect now targets `cp/addons`** (EE's native
+  Add-Ons list). The admin clicks the **Update** prompt on the affected
+  card to finalize — exactly the same flow as a manually-uploaded zip,
+  with EE's own POST + CSRF form.
+- **Cross-filesystem backup support**: backup dir can now live on a
+  different mount than the addons dir. `rename()` is attempted first
+  (atomic same-FS); falls back to recursive copy + source removal.
+- **Opcache invalidation** runs on every PHP file in the new install
+  immediately after the swap. Production setups with high
+  `opcache.revalidate_freq` or `validate_timestamps=0` no longer have
+  to wait for stale bytecode to expire.
+- **Audit log entries gain an `is_self` boolean** so post-incident
+  forensics can distinguish self-update failures (historically the
+  higher-risk case) from updates of other add-ons.
+
+### Self-healing
+- On every install, any leftover `system/user/addons/.{short}.backup.*`
+  directories from 1.3.0 are swept up automatically. Sites damaged by
+  the 1.3.0 collision recover on the next successful install of any
+  GitHub-mapped add-on.
+
+### Manual recovery (one-time, only if currently broken)
+If you upgraded to 1.3.0 via the one-click flow and now see
+`Class "TrustStore" not found` on any Addon Manager + screen:
+
+```bash
+cd /path/to/ee/system/user/addons
+rm -rf .addon_installer.backup.*
+```
+
+Then **Developer → Add-Ons** → click **Update** on the Add-on Manager +
+card to finalize the 1.3.0 install. After that, this 1.3.1 release
+installs through the (now-working) one-click flow with no further
+intervention.
+
 ## [1.3.0] - 2026-06-03
 
 ### Added — Supply-chain protection

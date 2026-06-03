@@ -210,6 +210,13 @@ class ReleaseInstaller
 
         $this->checker->forget($ownerRepo);
 
+        // Self-update = updating addon_installer itself. Surfaced in the
+        // audit log so post-incident forensics can distinguish "the
+        // installer broke during a self-update" from "during an update
+        // of some other addon" — historically the former has been the
+        // higher-risk case.
+        $isSelf = $shortName === 'addon_installer';
+
         $this->auditor->record([
             'event' => 'install_ok',
             'short_name' => $shortName,
@@ -221,20 +228,29 @@ class ReleaseInstaller
             'owner_id' => (int) ($identity['owner_id'] ?? 0),
             'repo_id' => (int) ($identity['repo_id'] ?? 0),
             'trust_state' => $reconfirmTrust ? 'reconfirmed' : 'trusted',
+            'is_self' => $isSelf,
         ]);
 
+        // Post-install redirect target: EE's native Add-Ons list. EE
+        // shows the "Update Available" prompt with the correct POST+CSRF
+        // form for $shortName, and the admin clicks it to finalize the
+        // DB-side version bump + any migrations. Earlier versions
+        // redirected straight to `addons/update/{short}` via GET, which
+        // EE 7 rejects with 403 — that endpoint is POST-only.
+        $postInstallUrl = function_exists('ee')
+            ? ee('CP/URL')->make('addons')->compile()
+            : '';
+
         return [
-            'short_name'  => $shortName,
-            'version'     => (string) ($release['version'] ?? ''),
-            'source'      => $sourceLabel,
-            'backup_path' => $backupPath,
-            'update_url'  => function_exists('ee')
-                ? ee('CP/URL')->make('addons/update/' . $shortName, [
-                    'return' => ee('CP/URL')
-                        ->make('addons/settings/addon_installer/packages')
-                        ->encode(),
-                ])->compile()
-                : '',
+            'short_name'      => $shortName,
+            'version'         => (string) ($release['version'] ?? ''),
+            'source'          => $sourceLabel,
+            'backup_path'     => $backupPath,
+            'is_self'         => $isSelf,
+            'post_install_url' => $postInstallUrl,
+            // Legacy alias — older view code reads `update_url`. Same
+            // target as post_install_url now.
+            'update_url'      => $postInstallUrl,
         ];
     }
 
@@ -555,22 +571,44 @@ class ReleaseInstaller
     /**
      * Move the existing addon dir aside and rename staging into place.
      * Keeps exactly one previous backup (older ones are removed first).
+     *
+     * Backups live in `system/user/cache/addon_installer/backups/{short}/{ts}/`
+     * — explicitly OUTSIDE `system/user/addons/` so EE's PSR-4 addon
+     * discovery never sees them. The earlier scheme of
+     * `system/user/addons/.{short}.backup.{ts}/` collided with the
+     * autoloader: even though the directory name starts with a dot, EE
+     * walked the addons dir and registered the backup as a second
+     * namespace-`JavidFazaeli\AddonInstaller` source, fatally confusing
+     * the class loader during self-updates (1.3.0 bug, see issue #N).
+     *
+     * Cross-filesystem move: the cache dir CAN be on a different mount
+     * than the addons dir on some hosts. We attempt rename() first
+     * (atomic same-FS), and fall back to copy+remove when rename fails
+     * with EXDEV-ish errors.
      */
     private function swapInto(string $shortName, string $stagingDir): ?string
     {
         $targetPath = $this->addonsPath . $shortName;
         $backupPath = null;
 
-        // Drop any prior backups for this short_name — we keep only the
-        // most recent one so updates don't accumulate stale copies.
-        $priorBackups = glob($this->addonsPath . '.' . $shortName . '.backup.*', GLOB_ONLYDIR) ?: [];
-        foreach ($priorBackups as $prior) {
-            $this->removeDirectory($prior);
-        }
+        // Sweep ANY prior backups for this short_name — both in the new
+        // location (cache) and the legacy location (dot-prefix inside
+        // addons/). Legacy sweep is the self-heal path for 1.3.0
+        // installs damaged by the autoloader-collision bug.
+        $this->sweepPriorBackups($shortName);
 
         if (is_dir($targetPath)) {
-            $backupPath = $this->addonsPath . '.' . $shortName . '.backup.' . time();
-            if (! @rename($targetPath, $backupPath)) {
+            $backupRoot = $this->backupRoot($shortName);
+            if (! is_dir($backupRoot) && ! @mkdir($backupRoot, 0775, true)) {
+                throw new RuntimeException(
+                    'Could not create backup directory: ' . $backupRoot
+                    . '. Check that system/user/cache is writable.'
+                );
+            }
+            $backupPath = rtrim($backupRoot, DIRECTORY_SEPARATOR)
+                . DIRECTORY_SEPARATOR . (string) time();
+
+            if (! $this->moveDirectory($targetPath, $backupPath)) {
                 throw new RuntimeException(
                     'Could not move existing add-on aside (insufficient permissions?). '
                     . 'Staging directory left at: ' . $stagingDir
@@ -581,7 +619,7 @@ class ReleaseInstaller
         if (! @rename($stagingDir, $targetPath)) {
             // Roll back: try to put the original dir back.
             if ($backupPath !== null && is_dir($backupPath)) {
-                @rename($backupPath, $targetPath);
+                $this->moveDirectory($backupPath, $targetPath);
             }
             throw new RuntimeException(
                 'Could not rename staging directory into place. The previous version was restored. '
@@ -589,7 +627,127 @@ class ReleaseInstaller
             );
         }
 
+        // Invalidate opcache for every PHP file in the new install. PHP
+        // would normally pick up changes within revalidate_freq seconds
+        // (default 2s) but production setups can have it set much higher
+        // or set validate_timestamps=0. Explicit invalidation makes sure
+        // the next request sees new code regardless of opcache tuning.
+        $this->invalidateOpcache($targetPath);
+
         return $backupPath;
+    }
+
+    /** Per-short_name backup directory root, outside addon discovery. */
+    private function backupRoot(string $shortName): string
+    {
+        $base = defined('SYSPATH')
+            ? SYSPATH . 'user/cache'
+            : sys_get_temp_dir();
+
+        return rtrim($base, DIRECTORY_SEPARATOR)
+            . DIRECTORY_SEPARATOR . 'addon_installer'
+            . DIRECTORY_SEPARATOR . 'backups'
+            . DIRECTORY_SEPARATOR . $shortName;
+    }
+
+    /**
+     * Remove any prior backups for $shortName from BOTH the new
+     * cache-based location and the legacy in-addons-dir location.
+     * Idempotent — safe to call on any install.
+     */
+    private function sweepPriorBackups(string $shortName): void
+    {
+        $newRoot = $this->backupRoot($shortName);
+        foreach (glob($newRoot . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR) ?: [] as $prior) {
+            $this->removeDirectory($prior);
+        }
+
+        // Legacy: dot-prefixed backups inside system/user/addons/.
+        // These existed in 1.3.0; sweeping them here ensures even a
+        // damaged 1.3.0 install heals on the next successful update.
+        foreach (glob($this->addonsPath . '.' . $shortName . '.backup.*', GLOB_ONLYDIR) ?: [] as $legacy) {
+            $this->removeDirectory($legacy);
+        }
+    }
+
+    /**
+     * Move a directory, preferring atomic rename(). Falls back to a
+     * recursive copy + source-removal when rename fails (typical on
+     * cross-filesystem moves between addons dir and cache dir).
+     */
+    private function moveDirectory(string $from, string $to): bool
+    {
+        if (@rename($from, $to)) {
+            return true;
+        }
+        if (! @mkdir($to, 0775, true) && ! is_dir($to)) {
+            return false;
+        }
+        if (! $this->copyDirectory($from, $to)) {
+            $this->removeDirectory($to);
+            return false;
+        }
+        $this->removeDirectory($from);
+        return true;
+    }
+
+    private function copyDirectory(string $from, string $to): bool
+    {
+        $from = rtrim($from, DIRECTORY_SEPARATOR);
+        $to   = rtrim($to, DIRECTORY_SEPARATOR);
+        $entries = @scandir($from);
+        if ($entries === false) {
+            return false;
+        }
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $src = $from . DIRECTORY_SEPARATOR . $entry;
+            $dst = $to . DIRECTORY_SEPARATOR . $entry;
+            if (is_dir($src) && ! is_link($src)) {
+                if (! @mkdir($dst, 0775, true) && ! is_dir($dst)) {
+                    return false;
+                }
+                if (! $this->copyDirectory($src, $dst)) {
+                    return false;
+                }
+            } else {
+                if (! @copy($src, $dst)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Best-effort opcache invalidation across the new install. Silent
+     * failure — if opcache isn't loaded or is disabled per-CLI, we
+     * still want the install to complete.
+     */
+    private function invalidateOpcache(string $targetPath): void
+    {
+        if (! function_exists('opcache_invalidate')) {
+            return;
+        }
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($targetPath, \FilesystemIterator::SKIP_DOTS)
+            );
+            foreach ($iterator as $fileInfo) {
+                if (! $fileInfo->isFile()) {
+                    continue;
+                }
+                $path = (string) $fileInfo;
+                if (substr($path, -4) === '.php') {
+                    @opcache_invalidate($path, true);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Swallow — failure to invalidate is non-fatal; opcache
+            // will revalidate via mtime within revalidate_freq seconds.
+        }
     }
 
     /**

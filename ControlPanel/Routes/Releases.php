@@ -119,21 +119,33 @@ class Releases extends AbstractRoute
             try {
                 $result = $releaseInstaller->installLatestRelease($shortName, $mapping['repo']);
 
+                $isSelf = ! empty($result['is_self']);
+                $body = sprintf(
+                    '%s v%s was extracted from %s. ',
+                    $shortName,
+                    $result['version'] !== '' ? $result['version'] : 'latest',
+                    $result['source']
+                );
+                $body .= $isSelf
+                    ? 'This was a self-update of Addon Manager + itself. Click the '
+                      . '"Update" prompt on the Add-on Manager + card below to finalize '
+                      . 'the DB-side version bump.'
+                    : 'Click the "Update" prompt on the ' . $shortName
+                      . ' card below to finalize and run any migrations.';
+
                 ee('CP/Alert')->makeBanner('addon-installer-release-install')
                     ->asSuccess()
                     ->withTitle('Release installed')
-                    ->addToBody(sprintf(
-                        '%s v%s was extracted from %s. Run the EE update step to apply migrations.',
-                        $shortName,
-                        $result['version'] !== '' ? $result['version'] : 'latest',
-                        $result['source']
-                    ))
+                    ->addToBody($body)
                     ->defer();
 
-                // Hand off to EE's native update screen so the admin
-                // consciously approves any migrations the new version
-                // declares. EE will redirect back to /packages on success.
-                ee()->functions->redirect($result['update_url']);
+                // Redirect to EE's native Add-Ons list. It shows the
+                // "Update Available" prompt with the right POST+CSRF
+                // form so the admin finalizes the install cleanly.
+                // GET-redirecting to addons/update/{short} (the previous
+                // behavior) hit a 403 in EE 7 — that endpoint is
+                // POST-only.
+                ee()->functions->redirect($result['post_install_url']);
             } catch (\Throwable $e) {
                 ee('CP/Alert')->makeBanner('addon-installer-release-install')
                     ->asIssue()

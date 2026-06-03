@@ -161,12 +161,19 @@ Clicking it:
 5. Locates the add-on subtree inside the zip by finding the
    `addon.setup.php` whose parent folder matches `short_name`. Falls
    back to the wrapper root for single-add-on source zipballs.
-6. Renames the existing add-on to `.{short_name}.backup.{ts}` (only one
-   backup is kept — older backups are removed first).
-7. Renames the staging dir into place.
+6. Moves the existing add-on to
+   `system/user/cache/addon_installer/backups/{short_name}/{ts}/` (only
+   one backup per short_name is kept — older ones are removed first).
+   The backup lives explicitly OUTSIDE `system/user/addons/` so EE's
+   PSR-4 addon discovery can't see it; `rename()` is attempted first,
+   with a copy-then-remove fallback for cross-filesystem moves.
+7. Renames the staging dir into place; invalidates PHP opcache for
+   every file in the new install so the next request sees the new
+   code immediately.
 8. Forgets the release cache so the new on-disk version is read fresh.
-9. Redirects to EE's native **Update Add-on** screen so any migration
-   step is consciously approved by the admin.
+9. Redirects to EE's native **Add-Ons** list so the admin clicks the
+   **Update** prompt on the affected card to finalize — exactly the
+   flow a manually-uploaded zip uses, with EE's own POST + CSRF form.
 
 If anything fails, the previous version stays in place (or is restored
 from backup), and the failure surfaces as a CP banner.
