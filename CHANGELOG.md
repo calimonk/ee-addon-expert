@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-06-03
+
+### Changed
+- **Custom-menu label is now configurable** and defaults to **"Addons"**
+  instead of "Add-on Manager +". EE's Custom sidebar is narrow and the
+  previous default truncated to "Add-on Manag..." on most themes.
+  Settings → new "Custom-menu label" text field (40 char cap, HTML
+  stripped). When pending-update count is enabled and there are pending
+  updates, the displayed label becomes e.g. "Addons (3)".
+
 ## [1.3.3] - 2026-06-03
 
 ### Fixed (docs)

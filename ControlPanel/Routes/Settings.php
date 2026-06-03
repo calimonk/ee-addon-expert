@@ -32,6 +32,7 @@ class Settings extends AbstractRoute
                 'show_in_custom_menu'    => ee()->input->post('show_in_custom_menu') === 'y' ? 'y' : 'n',
                 'custom_menu_target'     => (string) ee()->input->post('custom_menu_target'),
                 'custom_menu_show_count' => ee()->input->post('custom_menu_show_count') === 'y' ? 'y' : 'n',
+                'custom_menu_label'      => (string) ee()->input->post('custom_menu_label'),
             ];
 
             if ($store->saveAll($incoming)) {

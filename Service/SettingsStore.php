@@ -24,6 +24,14 @@ class SettingsStore
         // Whether to append a "(N)" count of pending GitHub updates to
         // the Custom-menu label.
         'custom_menu_show_count' => 'y',
+
+        // Base label for the Custom-menu entry. EE's Custom sidebar is
+        // narrow and long labels truncate ("Add-on Manag..."). Default
+        // matches the short-and-no-hyphen style most addons use (e.g.
+        // "Edge Cache", "CF Image", "Game Import"). When the
+        // pending-count setting is on AND there are pending updates,
+        // we append " (N)" — so "Addons" → "Addons (3)".
+        'custom_menu_label' => 'Addons',
     ];
 
     private string $file;
@@ -77,6 +85,17 @@ class SettingsStore
                     $clean[$key] = in_array((string) $value, ['releases', 'packages', 'index'], true)
                         ? (string) $value
                         : 'releases';
+                    break;
+                case 'custom_menu_label':
+                    // Trim + collapse internal whitespace; cap at 40
+                    // chars (the EE sidebar will truncate longer values
+                    // anyway). Strip control chars and angle brackets
+                    // — EE's render path doesn't escape labels, so HTML
+                    // in here would render. Empty falls back to default.
+                    $trimmed = preg_replace('#\s+#', ' ', trim((string) $value));
+                    $trimmed = preg_replace('#[<>\x00-\x1f]+#', '', $trimmed);
+                    $trimmed = mb_substr($trimmed, 0, 40);
+                    $clean[$key] = $trimmed !== '' ? $trimmed : self::DEFAULTS['custom_menu_label'];
                     break;
                 default:
                     $clean[$key] = $value;

@@ -5,6 +5,7 @@ $csrfToken  = $csrf_token ?? '';
 $target     = (string) ($values['custom_menu_target'] ?? 'releases');
 $showCount  = ($values['custom_menu_show_count'] ?? 'y') === 'y';
 $showInMenu = ($values['show_in_custom_menu'] ?? 'y') === 'y';
+$menuLabel  = (string) ($values['custom_menu_label'] ?? 'Addons');
 ?>
 <div class="addi-wrap">
   <p class="addi-toolbar">
@@ -61,11 +62,28 @@ $showInMenu = ($values['show_in_custom_menu'] ?? 'y') === 'y';
           </label>
         </div>
 
+        <div style="margin:8px 0 14px">
+          <strong style="display:block;margin-bottom:4px">Custom-menu label</strong>
+          <input
+            type="text"
+            name="custom_menu_label"
+            value="<?= $h($menuLabel) ?>"
+            maxlength="40"
+            placeholder="Addons"
+            style="width:280px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px"
+          >
+          <div class="addi-muted" style="font-size:12px;margin-top:4px">
+            Text the Custom-menu entry shows. EE's Custom sidebar is
+            narrow — keep it short. Default "Addons" matches the style
+            of other addons in the sidebar (e.g. "Edge Cache").
+          </div>
+        </div>
+
         <label style="display:block;margin:8px 0 4px">
           <input type="checkbox" name="custom_menu_show_count" value="y" <?= $showCount ? 'checked' : '' ?>>
           <strong>Append pending-update count to the label</strong>
           <div class="addi-muted" style="font-size:12px;margin-left:22px">
-            Label becomes "Add-on Manager + (3)" when there are pending
+            Label becomes "<?= $h($menuLabel) ?> (3)" when there are pending
             GitHub updates. EE's Custom menu doesn't support badge widgets,
             so the count is embedded in the label text.
           </div>
