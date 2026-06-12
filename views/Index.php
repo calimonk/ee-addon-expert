@@ -3,6 +3,8 @@ $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $status = $status ?? [];
 ?>
 <div class="addi-wrap">
+  <?php include __DIR__ . '/_finalize_banner.php'; ?>
+
   <?php if (! empty($installed_short_name)): ?>
     <section class="addi-notice is-success">
       <div>

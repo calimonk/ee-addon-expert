@@ -12,7 +12,7 @@ use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
 return [
     'name'              => 'Addon Manager +',
     'description'       => 'Manage ExpressionEngine add-ons from ZIP packages through the control panel.',
-    'version'           => '1.4.2',
+    'version'           => '1.4.3',
     'author'            => 'Javid Fazaeli',
     'author_url'        => 'https://fazaeli.dev',
     'namespace'         => 'JavidFazaeli\AddonInstaller',
@@ -73,7 +73,9 @@ return [
             return new PackageInstaller(
                 null,
                 ee('addon_installer:updateSourceRegistry'),
-                ee('addon_installer:githubReleaseChecker')
+                ee('addon_installer:githubReleaseChecker'),
+                ee('addon_installer:autoFinalizer'),
+                ee('addon_installer:installAuditor')
             );
         },
         'PackageInstaller' => function($addon) {

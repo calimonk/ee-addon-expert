@@ -57,6 +57,25 @@ class Index extends AbstractRoute
             }
         }
 
+        // Run any pending auto-finalize markers. After a successful
+        // upload, the user lands back on this screen via redirect —
+        // exactly the right time to fire EE's update flow for the
+        // freshly-extracted add-on. Without this, the admin had to
+        // wait minutes for EE to scan and surface the Update prompt
+        // on Developer → Add-Ons.
+        $finalizeResults = null;
+        try {
+            $settings = ee('addon_installer:settingsStore');
+            if ($settings->get('auto_finalize') === 'y') {
+                $finalizer = ee('addon_installer:autoFinalizer');
+                if (! empty($finalizer->pending())) {
+                    $finalizeResults = $finalizer->finalizeAllPending();
+                }
+            }
+        } catch (\Throwable $e) {
+            // Never let finalize errors block the screen render.
+        }
+
         $installedShortName = (string) ee()->input->get('installed', true);
         $installedAddon = $installedShortName !== '' ? ee('Addon')->get($installedShortName) : null;
         $isInstalled = $installedAddon ? (bool) $installedAddon->isInstalled() : false;
@@ -69,6 +88,7 @@ class Index extends AbstractRoute
             'installed_short_name' => $installedShortName,
             'installed_is_installed' => $isInstalled,
             'update_available' => $updateAvailable,
+            'finalize_results' => $finalizeResults,
             'manager_url' => ee('CP/URL')->make('addons')->compile(),
             'install_url' => $installedShortName !== '' && ! $isInstalled
                 ? ee('CP/URL')->make('addons/install/' . $installedShortName, [

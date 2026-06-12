@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-06-03
+
+### Changed
+- **Auto-finalize now also covers manual ZIP uploads**, not just the
+  one-click GitHub install flow. After dragging a zip into Install ZIP,
+  the same marker file + finalize-on-next-render pipeline runs, so
+  EE's "Update Available" prompt no longer needs to wait minutes for
+  EE's own addon scan to surface it.
+- Auto-finalize is now triggered from the **Index** (Install ZIP),
+  **Packages**, and **Releases** routes (Releases was the only one
+  in 1.4.0). Whichever screen the admin lands on after an install,
+  the finalizer runs.
+- The auto-finalize banner moved into a shared
+  `views/_finalize_banner.php` partial included from all three
+  views — single source of truth for the success/failure rendering.
+
+### Added
+- ZIP-upload installs now write an `install_ok` audit-log entry with
+  `source=upload_zip`, distinguishing them from GitHub installs
+  (`source=release-asset:*` / `source=source-zipball`) for
+  post-incident forensics.
+
+### Internal
+- `PackageInstaller::__construct` gains `AutoFinalizer` and
+  `InstallAuditor` dependencies (both optional / lazy-loaded via
+  `ee('addon_installer:...')` when not injected).
+- `addon.setup.php` updated to pass them into the singleton.
+
 ## [1.4.2] - 2026-06-03
 
 ### Fixed
