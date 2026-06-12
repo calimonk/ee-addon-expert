@@ -11,15 +11,21 @@ class PackageInstaller
 
     private ?UpdateSourceRegistry $sources = null;
     private ?GitHubReleaseChecker $releases = null;
+    private ?AutoFinalizer $finalizer = null;
+    private ?InstallAuditor $auditor = null;
 
     public function __construct(
         ?string $addonsPath = null,
         ?UpdateSourceRegistry $sources = null,
-        ?GitHubReleaseChecker $releases = null
+        ?GitHubReleaseChecker $releases = null,
+        ?AutoFinalizer $finalizer = null,
+        ?InstallAuditor $auditor = null
     ) {
         $this->addonsPath = rtrim($addonsPath ?: self::detectAddonsPath(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->sources = $sources;
         $this->releases = $releases;
+        $this->finalizer = $finalizer;
+        $this->auditor = $auditor;
     }
 
     private function sources(): UpdateSourceRegistry
@@ -40,6 +46,26 @@ class PackageInstaller
                 : new GitHubReleaseChecker();
         }
         return $this->releases;
+    }
+
+    private function finalizer(): AutoFinalizer
+    {
+        if ($this->finalizer === null) {
+            $this->finalizer = function_exists('ee')
+                ? ee('addon_installer:autoFinalizer')
+                : new AutoFinalizer();
+        }
+        return $this->finalizer;
+    }
+
+    private function auditor(): InstallAuditor
+    {
+        if ($this->auditor === null) {
+            $this->auditor = function_exists('ee')
+                ? ee('addon_installer:installAuditor')
+                : new InstallAuditor();
+        }
+        return $this->auditor;
     }
 
     public static function detectAddonsPath(): string
@@ -340,10 +366,28 @@ class PackageInstaller
 
         try {
             $info = $this->inspectZip($zip);
-            $targetPath = $this->addonsPath . $info['short_name'];
+            $shortName = $info['short_name'];
+            $targetPath = $this->addonsPath . $shortName;
 
             if (is_dir($targetPath) && ! $overwrite) {
-                throw new RuntimeException('An add-on folder named "' . $info['short_name'] . '" already exists. Enable overwrite to replace it.');
+                throw new RuntimeException('An add-on folder named "' . $shortName . '" already exists. Enable overwrite to replace it.');
+            }
+
+            // Capture the installed-in-DB version BEFORE we mutate any
+            // disk state. After the swap, EE's getInstalledVersion()
+            // still returns the DB-side number (which is what we want
+            // for the "from" of the finalize banner) — but reading
+            // it now is harmless and unambiguous.
+            $oldVersion = '';
+            if (function_exists('ee')) {
+                try {
+                    $addon = ee('Addon')->get($shortName);
+                    if ($addon) {
+                        $oldVersion = (string) $addon->getInstalledVersion();
+                    }
+                } catch (\Throwable $e) {
+                    // best effort
+                }
             }
 
             if (is_dir($targetPath)) {
@@ -392,14 +436,49 @@ class PackageInstaller
                 fclose($out);
             }
 
+            $newVersion = (string) ($info['metadata']['version'] ?? '');
+
+            // Schedule the EE-side finalize. The next page load through
+            // any of our routes (Install ZIP, Packages, Releases) will
+            // see the marker and run upd::update() + the DB version
+            // bump — same flow the GitHub one-click install uses.
+            //
+            // Without this the admin had to wait minutes for EE's own
+            // periodic addon scan to surface the "Update Available"
+            // prompt on Developer → Add-Ons. Now it fires
+            // immediately, on the redirect back from the upload.
+            try {
+                $this->finalizer()->schedule($shortName, $oldVersion, $newVersion);
+            } catch (\Throwable $e) {
+                // Marker write failure is non-fatal — admin can finalize
+                // manually via EE's native Update prompt.
+            }
+
+            // Mirror ReleaseInstaller's audit-log pattern so the
+            // upload-zip and one-click paths both leave a forensic
+            // trail. source=upload_zip distinguishes them from
+            // github-driven installs (release-asset:* / source-zipball).
+            try {
+                $this->auditor()->record([
+                    'event'       => 'install_ok',
+                    'short_name'  => $shortName,
+                    'version'     => $newVersion,
+                    'from'        => $oldVersion,
+                    'source'      => 'upload_zip',
+                    'is_self'     => $shortName === 'addon_installer',
+                ]);
+            } catch (\Throwable $e) {
+                // Audit failure is non-fatal.
+            }
+
             return [
-                'short_name' => $info['short_name'],
-                'name' => $info['metadata']['name'] ?? $info['short_name'],
-                'version' => $info['metadata']['version'] ?? '',
+                'short_name'  => $shortName,
+                'name'        => $info['metadata']['name'] ?? $shortName,
+                'version'     => $newVersion,
                 'target_path' => $targetPath,
-                'settings_url' => ee('CP/URL')->make('addons/settings/' . $info['short_name'])->compile(),
-                'manager_url' => ee('CP/URL')->make('addons')->compile(),
-                'install_url' => ee('CP/URL')->make('addons/install/' . $info['short_name'], [
+                'settings_url' => ee('CP/URL')->make('addons/settings/' . $shortName)->compile(),
+                'manager_url'  => ee('CP/URL')->make('addons')->compile(),
+                'install_url'  => ee('CP/URL')->make('addons/install/' . $shortName, [
                     'return' => ee('CP/URL')->make('addons/settings/addon_installer/packages')->encode(),
                 ])->compile(),
             ];

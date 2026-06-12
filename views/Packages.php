@@ -4,6 +4,8 @@ $packages = $packages ?? [];
 $csrfToken = $csrf_token ?? '';
 ?>
 <div class="addi-wrap">
+  <?php include __DIR__ . '/_finalize_banner.php'; ?>
+
   <p class="addi-toolbar">
     <a class="button button--primary" href="<?= $h($upload_url) ?>">Install ZIP</a>
     <a class="button button--default" href="<?= $h($docs_url) ?>">Documentation</a>

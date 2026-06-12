@@ -35,12 +35,29 @@ class Packages extends AbstractRoute
             $this->downloadPackage($installer, $download);
         }
 
+        // Same auto-finalize trigger as Index/Releases — covers users
+        // who navigate to Packages after a ZIP upload or GitHub
+        // install and skip the route the redirect actually targeted.
+        $finalizeResults = null;
+        try {
+            $settings = ee('addon_installer:settingsStore');
+            if ($settings->get('auto_finalize') === 'y') {
+                $finalizer = ee('addon_installer:autoFinalizer');
+                if (! empty($finalizer->pending())) {
+                    $finalizeResults = $finalizer->finalizeAllPending();
+                }
+            }
+        } catch (\Throwable $e) {
+            // Never let finalize errors block the screen render.
+        }
+
         $this->setBody('Packages', [
             'packages' => $installer->installedPackages(),
             'upload_url' => ee('CP/URL')->make('addons/settings/addon_installer/index')->compile(),
             'docs_url' => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
             'manager_url' => ee('CP/URL')->make('addons')->compile(),
             'csrf_token' => $installer->csrfToken(),
+            'finalize_results' => $finalizeResults,
         ]);
 
         return $this;
