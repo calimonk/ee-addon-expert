@@ -438,6 +438,17 @@ class PackageInstaller
 
             $newVersion = (string) ($info['metadata']['version'] ?? '');
 
+            // Invalidate PHP opcache for every PHP file we just wrote.
+            // Without this, the GET request that lands the user back
+            // here can still see the OLD bytecode for addon.setup.php
+            // for up to `opcache.revalidate_freq` seconds — at which
+            // point EE reads the old version, hasUpdate() returns
+            // false, and AutoFinalizer correctly decides there's
+            // nothing to do. From the admin's POV the finalize banner
+            // is missing "sometimes" (when revalidate_freq hadn't
+            // elapsed). Explicit invalidation closes the race.
+            $this->invalidateOpcache($targetPath);
+
             // Schedule the EE-side finalize. The next page load through
             // any of our routes (Install ZIP, Packages, Releases) will
             // see the marker and run upd::update() + the DB version
@@ -659,6 +670,38 @@ class PackageInstaller
         }
 
         rmdir($path);
+    }
+
+    /**
+     * Best-effort opcache invalidation for every PHP file under
+     * $targetPath. Silent on failure — opcache may be disabled, the
+     * extension may not be loaded, or the install may still complete
+     * fine without forced invalidation (just slower convergence).
+     *
+     * Same shape as ReleaseInstaller::invalidateOpcache. Worth
+     * extracting to a shared trait if a third caller ever needs it.
+     */
+    private function invalidateOpcache(string $targetPath): void
+    {
+        if (! function_exists('opcache_invalidate')) {
+            return;
+        }
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($targetPath, \FilesystemIterator::SKIP_DOTS)
+            );
+            foreach ($iterator as $fileInfo) {
+                if (! $fileInfo->isFile()) {
+                    continue;
+                }
+                $path = (string) $fileInfo;
+                if (substr($path, -4) === '.php') {
+                    @opcache_invalidate($path, true);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Swallow — non-fatal.
+        }
     }
 
     private function addDirectoryToZip(ZipArchive $zip, string $path, string $shortName): void

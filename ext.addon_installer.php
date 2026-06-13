@@ -25,7 +25,7 @@ use JavidFazaeli\AddonInstaller\Service\SettingsStore;
 class Addon_installer_ext
 {
     public $name        = 'Addon Manager +';
-    public $version     = '1.4.3';
+    public $version     = '1.4.4';
     public $description = 'Custom-menu integration for Addon Manager +';
     public $docs_url    = 'https://github.com/calimonk/ee-addon-manager';
     public $settings_exist = 'n'; // Settings live in our own Settings screen.

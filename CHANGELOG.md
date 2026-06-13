@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-06-03
+
+### Fixed
+- **Auto-finalize after a ZIP upload was inconsistent.** Sometimes the
+  banner showed; sometimes it didn't. Root cause: PHP opcache could
+  still serve the OLD bytecode for `addon.setup.php` for up to
+  `opcache.revalidate_freq` seconds after the swap, so EE read the
+  pre-swap version, `hasUpdate()` returned false, and AutoFinalizer
+  correctly decided there was nothing to do — but the user perceived
+  it as "the feature didn't fire". `ReleaseInstaller` already
+  invalidated opcache after its atomic swap; `PackageInstaller::installUploaded`
+  did not. Adding `invalidateOpcache()` to the upload path closes
+  the race.
+
+### Changed
+- **Auto-finalize banner now shows skipped events too.** Previously
+  the banner only rendered when something was finalized or failed —
+  so when a user re-uploaded the same version (or uploaded to a
+  fresh-not-yet-installed addon), the banner stayed silent and the
+  whole thing looked broken. Now skipped events render as a quiet
+  grey "No-op:" line with a human-readable reason (e.g. *"on-disk
+  version already matches the installed version — nothing to do"*).
+  The admin always gets a clear answer to "did the finalize step
+  fire, and what did it find?"
+
 ## [1.4.3] - 2026-06-03
 
 ### Changed
