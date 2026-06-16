@@ -34,13 +34,20 @@ class Index extends AbstractRoute
             try {
                 $result = $installer->installUploaded(
                     $_FILES['addon_package'] ?? [],
-                    (bool) ee()->input->post('overwrite_existing')
+                    (bool) ee()->input->post('overwrite_existing'),
+                    (bool) ee()->input->post('override_requirements'),
+                    trim((string) ee()->input->post('override_reason')) ?: null
                 );
+
+                $uploadBody = $result['name'] . ' was extracted to the ExpressionEngine add-ons folder.';
+                if (! empty($result['override_applied'])) {
+                    $uploadBody .= ' Version requirements were OVERRIDDEN — see the requirement-override badge on Packages.';
+                }
 
                 ee('CP/Alert')->makeBanner('addon-installer-upload')
                     ->asSuccess()
                     ->withTitle('Package uploaded')
-                    ->addToBody($result['name'] . ' was extracted to the ExpressionEngine add-ons folder.')
+                    ->addToBody($uploadBody)
                     ->defer();
 
                 ee()->functions->redirect(ee('CP/URL')->make('addons/settings/addon_installer/index', [

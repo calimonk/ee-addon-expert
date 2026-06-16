@@ -109,6 +109,25 @@ $status = $status ?? [];
           <input type="checkbox" name="overwrite_existing" value="1">
           <span>Overwrite an existing add-on folder with the same short name</span>
         </label>
+
+        <label class="addi-check" style="margin-top:8px">
+          <input type="checkbox" name="override_requirements" value="1"
+                 onchange="var r=document.getElementById('addi-override-reason'); if(r){r.style.display=this.checked?'block':'none';}">
+          <span>
+            <strong style="color:#b45309">Override version requirements</strong>
+            — force-install even if the add-on declares a newer PHP / EE
+            than this server runs. Only do this if you've verified the
+            add-on actually runs on this environment; we patch the
+            declared requirement so EE accepts it and flag the add-on as
+            overridden.
+          </span>
+        </label>
+
+        <div id="addi-override-reason" style="display:none;margin-top:6px">
+          <input type="text" name="override_reason" maxlength="200"
+                 placeholder="Optional: why is this override safe? (recorded in the audit log)"
+                 style="width:100%;padding:5px 8px;border:1px solid #cbd5e1;border-radius:4px;font-size:12.5px">
+        </div>
       </div>
 
       <p class="addi-actions">

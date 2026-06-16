@@ -3,6 +3,7 @@
 use JavidFazaeli\AddonInstaller\Service\AutoFinalizer;
 use JavidFazaeli\AddonInstaller\Service\GitHubReleaseChecker;
 use JavidFazaeli\AddonInstaller\Service\InstallAuditor;
+use JavidFazaeli\AddonInstaller\Service\OverrideStore;
 use JavidFazaeli\AddonInstaller\Service\PackageInstaller;
 use JavidFazaeli\AddonInstaller\Service\ReleaseInstaller;
 use JavidFazaeli\AddonInstaller\Service\SettingsStore;
@@ -12,7 +13,7 @@ use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
 return [
     'name'              => 'Addon Manager +',
     'description'       => 'Manage ExpressionEngine add-ons from ZIP packages through the control panel.',
-    'version'           => '1.5.0',
+    'version'           => '1.6.0',
     'author'            => 'Javid Fazaeli',
     'author_url'        => 'https://fazaeli.dev',
     'namespace'         => 'JavidFazaeli\AddonInstaller',
@@ -49,6 +50,12 @@ return [
         'SettingsStore' => function($addon) {
             return ee('addon_installer:settingsStore');
         },
+        'overrideStore' => function($addon) {
+            return new OverrideStore();
+        },
+        'OverrideStore' => function($addon) {
+            return ee('addon_installer:overrideStore');
+        },
         'autoFinalizer' => function($addon) {
             return new AutoFinalizer(
                 ee('addon_installer:installAuditor')
@@ -63,7 +70,8 @@ return [
                 ee('addon_installer:githubReleaseChecker'),
                 ee('addon_installer:trustStore'),
                 ee('addon_installer:installAuditor'),
-                ee('addon_installer:autoFinalizer')
+                ee('addon_installer:autoFinalizer'),
+                ee('addon_installer:overrideStore')
             );
         },
         'ReleaseInstaller' => function($addon) {
@@ -75,7 +83,8 @@ return [
                 ee('addon_installer:updateSourceRegistry'),
                 ee('addon_installer:githubReleaseChecker'),
                 ee('addon_installer:autoFinalizer'),
-                ee('addon_installer:installAuditor')
+                ee('addon_installer:installAuditor'),
+                ee('addon_installer:overrideStore')
             );
         },
         'PackageInstaller' => function($addon) {

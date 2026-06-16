@@ -43,6 +43,34 @@ $csrfToken = $csrf_token ?? '';
               <?php endif; ?>
             </header>
 
+            <?php if (! empty($package['is_overridden'])): ?>
+              <?php
+                $ov = $package['override_info'] ?? [];
+                $origReq = $ov['original_requires'] ?? [];
+                $origStr = [];
+                foreach ($origReq as $k => $v) { $origStr[] = $k . ' ' . $v; }
+              ?>
+              <p style="margin:0 0 8px">
+                <span style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:600"
+                      title="This add-on's declared requirements were overridden at install. Original: <?= $h(implode(', ', $origStr)) ?>">
+                  ⚠ requirement override<?= ! empty($origStr) ? ' (declared ' . $h(implode(', ', $origStr)) . ')' : '' ?>
+                </span>
+              </p>
+            <?php elseif (! empty($package['compat_issues'])): ?>
+              <p style="margin:0 0 8px">
+                <span style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:600"
+                      title="<?= $h(implode(' ', $package['compat_issues'])) ?>">
+                  ⚠ incompatible — <?= $h(implode(' ', $package['compat_issues'])) ?>
+                </span>
+                <?php if (empty($package['is_installed'])): ?>
+                  <span class="addi-muted" style="font-size:11.5px;display:block;margin-top:3px">
+                    EE will refuse to install this. To force it, re-upload via
+                    <strong>Install ZIP</strong> with "Override version requirements" ticked.
+                  </span>
+                <?php endif; ?>
+              </p>
+            <?php endif; ?>
+
             <?php if (! empty($package['description'])): ?>
               <p class="addi-package-description"><?= $h($package['description']) ?></p>
             <?php endif; ?>

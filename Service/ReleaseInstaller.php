@@ -45,13 +45,15 @@ class ReleaseInstaller
     private TrustStore $trust;
     private InstallAuditor $auditor;
     private ?AutoFinalizer $finalizer;
+    private ?OverrideStore $overrides;
 
     public function __construct(
         ?string $addonsPath = null,
         ?GitHubReleaseChecker $checker = null,
         ?TrustStore $trust = null,
         ?InstallAuditor $auditor = null,
-        ?AutoFinalizer $finalizer = null
+        ?AutoFinalizer $finalizer = null,
+        ?OverrideStore $overrides = null
     ) {
         $this->addonsPath = rtrim(
             $addonsPath ?: PackageInstaller::detectAddonsPath(),
@@ -62,6 +64,17 @@ class ReleaseInstaller
         $this->trust   = $trust ?: new TrustStore();
         $this->auditor = $auditor ?: new InstallAuditor();
         $this->finalizer = $finalizer;
+        $this->overrides = $overrides;
+    }
+
+    private function overrides(): OverrideStore
+    {
+        if ($this->overrides === null) {
+            $this->overrides = function_exists('ee')
+                ? ee('addon_installer:overrideStore')
+                : new OverrideStore();
+        }
+        return $this->overrides;
     }
 
     /**
@@ -530,11 +543,45 @@ class ReleaseInstaller
             $requires = $this->parseStagedRequires($stagedSetup);
             $issues = PackageInstaller::checkRequirements($requires);
             if (! empty($issues)) {
-                throw new RuntimeException(
-                    'Refusing to install ' . $shortName . ': '
-                    . implode(' ', $issues)
-                    . ' (Declared in the release\'s addon.setup.php. The previous version is untouched.)'
-                );
+                // If this add-on has a standing requirement override, the
+                // admin already forced past this same gate on a previous
+                // install. Re-apply the patch to the new release's staged
+                // setup so the override survives the update instead of
+                // re-breaking on every new version. Otherwise refuse.
+                if ($this->overrides()->has($shortName)) {
+                    $original = PackageInstaller::patchRequiresInFile($stagedSetup);
+                    if (! empty($original)) {
+                        $patchedTo = [];
+                        foreach (array_keys($original) as $k) {
+                            $patchedTo[$k] = $k === 'php'
+                                ? PHP_VERSION
+                                : (defined('APP_VER') ? APP_VER : '');
+                        }
+                        $this->overrides()->record($shortName, $original, $patchedTo);
+                        $this->auditor->record([
+                            'event'      => 'requirement_override_reapplied',
+                            'short_name' => $shortName,
+                            'original'   => $original,
+                            'patched_to' => $patchedTo,
+                            'source'     => 'github_update',
+                        ]);
+                    }
+                    // Re-verify after patching; if still incompatible
+                    // (e.g. a NEW requirement key the override didn't
+                    // cover), fall through to the refuse below.
+                    $issues = PackageInstaller::checkRequirements(
+                        $this->parseStagedRequires($stagedSetup)
+                    );
+                }
+
+                if (! empty($issues)) {
+                    throw new RuntimeException(
+                        'Refusing to install ' . $shortName . ': '
+                        . implode(' ', $issues)
+                        . ' (Declared in the release\'s addon.setup.php. The previous version is untouched.'
+                        . ' To force it, install via Install ZIP with "Override version requirements" ticked.)'
+                    );
+                }
             }
 
             return $staging;

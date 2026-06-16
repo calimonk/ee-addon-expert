@@ -13,19 +13,22 @@ class PackageInstaller
     private ?GitHubReleaseChecker $releases = null;
     private ?AutoFinalizer $finalizer = null;
     private ?InstallAuditor $auditor = null;
+    private ?OverrideStore $overrides = null;
 
     public function __construct(
         ?string $addonsPath = null,
         ?UpdateSourceRegistry $sources = null,
         ?GitHubReleaseChecker $releases = null,
         ?AutoFinalizer $finalizer = null,
-        ?InstallAuditor $auditor = null
+        ?InstallAuditor $auditor = null,
+        ?OverrideStore $overrides = null
     ) {
         $this->addonsPath = rtrim($addonsPath ?: self::detectAddonsPath(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->sources = $sources;
         $this->releases = $releases;
         $this->finalizer = $finalizer;
         $this->auditor = $auditor;
+        $this->overrides = $overrides;
     }
 
     private function sources(): UpdateSourceRegistry
@@ -66,6 +69,16 @@ class PackageInstaller
                 : new InstallAuditor();
         }
         return $this->auditor;
+    }
+
+    private function overrides(): OverrideStore
+    {
+        if ($this->overrides === null) {
+            $this->overrides = function_exists('ee')
+                ? ee('addon_installer:overrideStore')
+                : new OverrideStore();
+        }
+        return $this->overrides;
     }
 
     public static function detectAddonsPath(): string
@@ -134,6 +147,12 @@ class PackageInstaller
 
             $remote = $this->resolveRemote($shortName, $diskVersion);
 
+            // Compatibility of what's on disk vs the running environment.
+            // For a not-yet-installed package this tells the admin up
+            // front whether clicking EE's native Install will be refused.
+            $compatIssues = self::checkRequirements((array) ($meta['requires'] ?? []));
+            $override = $this->overrides()->get($shortName);
+
             $packages[] = [
                 'short_name' => $shortName,
                 'name' => $addon ? $addon->getName() : ($meta['name'] ?? $shortName),
@@ -144,6 +163,9 @@ class PackageInstaller
                 'is_installed' => $isInstalled,
                 'update_available' => $updateAvailable,
                 'settings_available' => $settingsAvailable,
+                'compat_issues' => $compatIssues,
+                'is_overridden' => $override !== null,
+                'override_info' => $override,
                 'remote_repo' => $remote['repo'],
                 'remote_repo_source' => $remote['source'],
                 'remote_version' => $remote['version'],
@@ -340,7 +362,7 @@ class PackageInstaller
         return $count;
     }
 
-    public function installUploaded(array $file, bool $overwrite = false): array
+    public function installUploaded(array $file, bool $overwrite = false, bool $overrideRequirements = false, ?string $overrideReason = null): array
     {
         $this->assertReady();
 
@@ -375,13 +397,21 @@ class PackageInstaller
             // reported "Package uploaded". Surfacing it here means the
             // admin learns the package can't run on this server before we
             // touch the filesystem, instead of hitting EE's wall later.
+            //
+            // The $overrideRequirements escape hatch lets an admin force
+            // an install despite the declared requirement (use case:
+            // author over-declared a PHP baseline the code doesn't
+            // actually need). When set, we proceed and patch the
+            // extracted setup.php further down — never silently, always
+            // recorded + badged + audited.
             $requires = (array) ($info['metadata']['requires'] ?? []);
             $issues = self::checkRequirements($requires);
-            if (! empty($issues)) {
+            if (! empty($issues) && ! $overrideRequirements) {
                 throw new RuntimeException(
                     'This package cannot be installed on this server: '
                     . implode(' ', $issues)
-                    . ' (Declared in the add-on\'s addon.setup.php; EE would refuse to install it too.)'
+                    . ' (Declared in the add-on\'s addon.setup.php; EE would refuse to install it too.'
+                    . ' Tick "Override version requirements" to force it anyway.)'
                 );
             }
 
@@ -454,6 +484,52 @@ class PackageInstaller
 
             $newVersion = (string) ($info['metadata']['version'] ?? '');
 
+            // Apply the requirement override (if forced + actually
+            // incompatible). Patches the freshly-extracted addon.setup.php
+            // so EE's native install gate reads a satisfied requirement,
+            // records the original in the override registry for the
+            // badge + audit trail, and re-applies cleanly on future
+            // updates of the same add-on.
+            $overrideApplied = false;
+            if (! empty($issues) && $overrideRequirements) {
+                $setupOnDisk = $targetPath . DIRECTORY_SEPARATOR . 'addon.setup.php';
+                $original = self::patchRequiresInFile($setupOnDisk);
+                if (! empty($original)) {
+                    $overrideApplied = true;
+                    $by = null;
+                    if (function_exists('ee')) {
+                        try {
+                            $login = ee()->session->userdata('username');
+                            $by = is_string($login) && $login !== '' ? $login : null;
+                        } catch (\Throwable $e) {
+                            // best effort
+                        }
+                    }
+                    $patchedTo = [];
+                    foreach (array_keys($original) as $k) {
+                        $patchedTo[$k] = $k === 'php'
+                            ? PHP_VERSION
+                            : (defined('APP_VER') ? APP_VER : '');
+                    }
+                    $this->overrides()->record($shortName, $original, $patchedTo, $by, $overrideReason);
+
+                    try {
+                        $this->auditor()->record([
+                            'event'        => 'requirement_override',
+                            'short_name'   => $shortName,
+                            'version'      => $newVersion,
+                            'source'       => 'upload_zip',
+                            'original'     => $original,
+                            'patched_to'   => $patchedTo,
+                            'reason'       => $overrideReason,
+                            'is_self'      => $shortName === 'addon_installer',
+                        ]);
+                    } catch (\Throwable $e) {
+                        // non-fatal
+                    }
+                }
+            }
+
             // Invalidate PHP opcache for every PHP file we just wrote.
             // Without this, the GET request that lands the user back
             // here can still see the OLD bytecode for addon.setup.php
@@ -503,6 +579,7 @@ class PackageInstaller
                 'name'        => $info['metadata']['name'] ?? $shortName,
                 'version'     => $newVersion,
                 'target_path' => $targetPath,
+                'override_applied' => $overrideApplied,
                 'settings_url' => ee('CP/URL')->make('addons/settings/' . $shortName)->compile(),
                 'manager_url'  => ee('CP/URL')->make('addons')->compile(),
                 'install_url'  => ee('CP/URL')->make('addons/install/' . $shortName, [
@@ -700,6 +777,75 @@ class PackageInstaller
         }
 
         return $issues;
+    }
+
+    /**
+     * Rewrite the `requires` block of an on-disk addon.setup.php so the
+     * failing keys point at the running environment, making EE's native
+     * install gate pass. Only the keys that are actually too-high are
+     * lowered (php → PHP_VERSION, ee → APP_VER); satisfied keys are left
+     * alone. Returns the ORIGINAL requires values that were changed, for
+     * the override registry.
+     *
+     * Edits are scoped to the requires block region (located by regex
+     * with offset capture) so we never touch a stray 'php' => '...'
+     * elsewhere in the file. No include()/eval — pure string surgery.
+     *
+     * @return array<string,string> original values of changed keys (empty = nothing changed)
+     */
+    public static function patchRequiresInFile(string $setupPath): array
+    {
+        $contents = @file_get_contents($setupPath);
+        if ($contents === false || $contents === '') {
+            return [];
+        }
+
+        if (! preg_match('/[\'"]requires[\'"]\s*=>\s*(?:\[|array\s*\()/s', $contents, $open, PREG_OFFSET_CAPTURE)) {
+            return [];
+        }
+
+        $blockStart = $open[0][1] + strlen($open[0][0]);
+        // Find the first closing bracket after the opener — requires
+        // arrays are flat, so this is the block end.
+        $closePos = strcspn(substr($contents, $blockStart), '])');
+        $blockEnd = $blockStart + $closePos;
+        $block = substr($contents, $blockStart, $blockEnd - $blockStart);
+
+        $changed = [];
+        $newBlock = $block;
+
+        $lowerTargets = [
+            'php' => PHP_VERSION,
+            'ee'  => defined('APP_VER') ? APP_VER : null,
+        ];
+
+        foreach ($lowerTargets as $key => $runningVersion) {
+            if ($runningVersion === null) {
+                continue;
+            }
+            if (! preg_match("/(['\"]" . $key . "['\"]\\s*=>\\s*)(['\"])([^'\"]*)\\2/s", $newBlock, $m)) {
+                continue;
+            }
+            $declared = $m[3];
+            // Only lower keys that are actually blocking.
+            if (version_compare($runningVersion, $declared, '>=')) {
+                continue;
+            }
+            $changed[$key] = $declared;
+            $replacement = $m[1] . $m[2] . $runningVersion . $m[2];
+            $newBlock = str_replace($m[0], $replacement, $newBlock);
+        }
+
+        if (empty($changed)) {
+            return [];
+        }
+
+        $patched = substr($contents, 0, $blockStart) . $newBlock . substr($contents, $blockEnd);
+        if (@file_put_contents($setupPath, $patched) === false) {
+            throw new RuntimeException('Could not write the requirement override to ' . $setupPath . '.');
+        }
+
+        return $changed;
     }
 
     private function safeDestination(string $targetPath, string $relativePath): string

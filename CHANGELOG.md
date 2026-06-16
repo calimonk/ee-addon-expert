@@ -6,6 +6,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-03
+
+### Added — Requirement override (force install)
+- An **"Override version requirements"** checkbox on the Install ZIP
+  form. When an add-on declares a newer PHP/EE than the server runs and
+  you tick it, the installer extracts the package, **patches the
+  extracted `addon.setup.php`'s `requires` down to the running
+  environment** (only the failing keys — a satisfied `ee` requirement is
+  left alone), and proceeds. This is the only way past EE's native
+  install gate, which reads the add-on's own declared `requires`.
+- Overrides are recorded in `system/user/config/addon_installer_overrides.json`
+  with the **original** declared requirement, who forced it, when, and an
+  optional reason — and audit-logged (`requirement_override`).
+- A persistent **"⚠ requirement override"** badge on the Packages screen
+  shows which add-ons have been forced and what they originally declared,
+  so it's never silently forgotten.
+- **Re-apply on update**: if an overridden add-on later updates via the
+  GitHub one-click flow, the patch is re-applied to the new release
+  automatically (`requirement_override_reapplied`) so the override
+  survives updates instead of re-breaking. If the new release adds a
+  *different* unmet requirement the override didn't cover, the install
+  is still refused.
+- The patch is pure string surgery on the `requires` block (scoped by
+  offset so it never touches a stray `'php' => ...` elsewhere); the
+  add-on's PHP is never `include()`d. Smoke-tested across 12 scenarios
+  (modern + legacy array syntax, partial patch, no-op, valid-PHP output,
+  passes-the-gate-after).
+
+### Added — Packages-screen compatibility awareness
+- The Packages screen now flags **not-yet-installed packages that EE
+  would refuse** (incompatible PHP/EE) with a red "⚠ incompatible"
+  badge and a pointer to the override flow — instead of showing an
+  Install button that silently bounces off EE's native gate. (Answers
+  "does the pre-flight cover the Packages page?" — it does now.)
+
+### Internal
+- New `Service/OverrideStore` (JSON registry, preserves first-seen
+  original across re-applies).
+- `PackageInstaller::patchRequiresInFile()` (static, shared with
+  ReleaseInstaller); `installUploaded()` gains `$overrideRequirements`
+  + `$overrideReason` params and an `override_applied` return flag.
+- `installedPackages()` surfaces `compat_issues`, `is_overridden`,
+  `override_info` per package.
+- `ReleaseInstaller` honors the override registry at the staging gate.
+
 ## [1.5.0] - 2026-06-03
 
 ### Added — Compatibility pre-flight check
