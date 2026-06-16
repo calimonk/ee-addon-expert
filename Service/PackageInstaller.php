@@ -369,6 +369,22 @@ class PackageInstaller
             $shortName = $info['short_name'];
             $targetPath = $this->addonsPath . $shortName;
 
+            // Pre-flight compatibility check. EE's native installer reads
+            // the same `requires` block and refuses incompatible installs
+            // — but only at the install step, AFTER we've extracted and
+            // reported "Package uploaded". Surfacing it here means the
+            // admin learns the package can't run on this server before we
+            // touch the filesystem, instead of hitting EE's wall later.
+            $requires = (array) ($info['metadata']['requires'] ?? []);
+            $issues = self::checkRequirements($requires);
+            if (! empty($issues)) {
+                throw new RuntimeException(
+                    'This package cannot be installed on this server: '
+                    . implode(' ', $issues)
+                    . ' (Declared in the add-on\'s addon.setup.php; EE would refuse to install it too.)'
+                );
+            }
+
             if (is_dir($targetPath) && ! $overwrite) {
                 throw new RuntimeException('An add-on folder named "' . $shortName . '" already exists. Enable overwrite to replace it.');
             }
@@ -614,7 +630,76 @@ class PackageInstaller
             }
         }
 
+        $requires = $this->parseRequires($contents);
+        if (! empty($requires)) {
+            $metadata['requires'] = $requires;
+        }
+
         return $metadata;
+    }
+
+    /**
+     * Extract the `requires` block from a setup.php string. EE's format is
+     * a flat array of scalars:
+     *
+     *   'requires' => ['php' => '8.3', 'ee' => '7.0.0', 'mysql' => '5.6'],
+     *
+     * We parse by regex rather than include() — the upload flow must NOT
+     * execute untrusted PHP (a security property the README advertises),
+     * and the GitHub flow must not load PHP-8.3 syntax on a PHP-8.1 host
+     * (a parse fatal would take down the request). We grab the substring
+     * from `requires =>` to the first closing bracket and pull scalar
+     * values from it. Nested arrays inside requires (non-standard) would
+     * truncate early — acceptable degradation, never a crash.
+     *
+     * @return array<string,string>
+     */
+    private function parseRequires(string $contents): array
+    {
+        if (! preg_match('/[\'"]requires[\'"]\s*=>\s*(?:\[|array\s*\()(.*?)(?:\]|\))/s', $contents, $block)) {
+            return [];
+        }
+
+        $requires = [];
+        foreach (['php', 'ee', 'mysql', 'mariadb'] as $req) {
+            if (preg_match("/['\"]" . $req . "['\"]\\s*=>\\s*(['\"])(.*?)\\1/s", $block[1], $match)) {
+                $requires[$req] = trim($match[2]);
+            }
+        }
+
+        return $requires;
+    }
+
+    /**
+     * Compare a parsed `requires` array against the running environment.
+     * Mirrors EE's own enforcement in
+     * Controller\Addons\Addons (version_compare with '<'), so we surface
+     * the SAME verdict EE would at install time — just earlier, before we
+     * extract or swap anything.
+     *
+     * @return string[] Human-readable incompatibility messages (empty = OK)
+     */
+    public static function checkRequirements(array $requires): array
+    {
+        $issues = [];
+
+        if (! empty($requires['php']) && version_compare(PHP_VERSION, (string) $requires['php'], '<')) {
+            $issues[] = sprintf(
+                'Requires PHP %s — this server runs PHP %s.',
+                $requires['php'],
+                PHP_VERSION
+            );
+        }
+
+        if (! empty($requires['ee']) && defined('APP_VER') && version_compare(APP_VER, (string) $requires['ee'], '<')) {
+            $issues[] = sprintf(
+                'Requires ExpressionEngine %s — this site runs %s.',
+                $requires['ee'],
+                APP_VER
+            );
+        }
+
+        return $issues;
     }
 
     private function safeDestination(string $targetPath, string $relativePath): string

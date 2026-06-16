@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-03
+
+### Added — Compatibility pre-flight check
+- Both install paths now read the `requires` block from the add-on's
+  `addon.setup.php` and refuse incompatible installs **before** touching
+  the filesystem, with a clear message. Mirrors EE's own enforcement
+  (`requires['php']` vs `PHP_VERSION`, `requires['ee']` vs `APP_VER`,
+  `version_compare(..., '<')`) — but surfaces the verdict at upload /
+  download time instead of only at EE's later install step.
+  - **Upload ZIP**: checked right after inspecting the zip, before
+    extraction. Previously the upload reported "Package uploaded"
+    success and the admin only discovered the incompatibility when EE's
+    native installer refused it.
+  - **GitHub one-click**: checked at the staging step, before the
+    atomic swap, so the existing install stays intact. This is the more
+    important of the two — swapping in code that declares (and uses)
+    a newer PHP syntax than the host runs could fatal the CP on the
+    next request that loads the add-on.
+- `requires` is parsed by regex, never `include()` — the upload flow
+  must not execute untrusted PHP (an existing security property), and
+  the GitHub flow must not load too-new syntax just to read a version
+  (a parse fatal would crash the request). Parser handles modern
+  `[...]` and legacy `array(...)` syntax, multiline, and `php` / `ee` /
+  `mysql` / `mariadb` keys.
+- Smoke-tested across 5 parse scenarios + 5 requirement-check scenarios.
+
+### Internal
+- `PackageInstaller::parseRequires()` + public static
+  `PackageInstaller::checkRequirements()` (shared verdict logic).
+- `ReleaseInstaller::parseStagedRequires()` reads from the staged file
+  path (can't `include` downloaded PHP).
+
 ## [1.4.4] - 2026-06-03
 
 ### Fixed

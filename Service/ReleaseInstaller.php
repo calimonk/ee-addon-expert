@@ -518,6 +518,25 @@ class ReleaseInstaller
                 );
             }
 
+            // Pre-flight compatibility check, BEFORE the swap. This is
+            // even more important here than on the upload path: if the
+            // new release declares (and uses) PHP 8.3 syntax and we swap
+            // it onto a PHP 8.1 host, auto-finalize — or any later CP
+            // request that loads the addon — would fatal trying to parse
+            // it. Refuse at staging so the existing install stays intact.
+            // We parse the requires via regex (never include the
+            // downloaded PHP) for the same reason: loading 8.3 syntax to
+            // read a version would itself crash.
+            $requires = $this->parseStagedRequires($stagedSetup);
+            $issues = PackageInstaller::checkRequirements($requires);
+            if (! empty($issues)) {
+                throw new RuntimeException(
+                    'Refusing to install ' . $shortName . ': '
+                    . implode(' ', $issues)
+                    . ' (Declared in the release\'s addon.setup.php. The previous version is untouched.)'
+                );
+            }
+
             return $staging;
         } catch (\Throwable $e) {
             $zip->close();
@@ -655,6 +674,36 @@ class ReleaseInstaller
         $this->invalidateOpcache($targetPath);
 
         return $backupPath;
+    }
+
+    /**
+     * Parse the `requires` block from a staged addon.setup.php by regex.
+     * Same approach + format as PackageInstaller::parseRequires — kept
+     * local rather than shared because we must read from a file path
+     * here (the staged setup) and must NOT include() it (downloaded
+     * PHP that may use a too-new syntax). Flat scalar array assumed.
+     *
+     * @return array<string,string>
+     */
+    private function parseStagedRequires(string $setupPath): array
+    {
+        $contents = @file_get_contents($setupPath);
+        if ($contents === false || $contents === '') {
+            return [];
+        }
+
+        if (! preg_match('/[\'"]requires[\'"]\s*=>\s*(?:\[|array\s*\()(.*?)(?:\]|\))/s', $contents, $block)) {
+            return [];
+        }
+
+        $requires = [];
+        foreach (['php', 'ee', 'mysql', 'mariadb'] as $req) {
+            if (preg_match("/['\"]" . $req . "['\"]\\s*=>\\s*(['\"])(.*?)\\1/s", $block[1], $match)) {
+                $requires[$req] = trim($match[2]);
+            }
+        }
+
+        return $requires;
     }
 
     /** Lazy-construct the AutoFinalizer (uses DI if available). */
