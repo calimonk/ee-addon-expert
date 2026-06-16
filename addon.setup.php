@@ -1,6 +1,7 @@
 <?php
 
 use JavidFazaeli\AddonInstaller\Service\AutoFinalizer;
+use JavidFazaeli\AddonInstaller\Service\CompatibilityScanner;
 use JavidFazaeli\AddonInstaller\Service\GitHubReleaseChecker;
 use JavidFazaeli\AddonInstaller\Service\InstallAuditor;
 use JavidFazaeli\AddonInstaller\Service\OverrideStore;
@@ -13,7 +14,7 @@ use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
 return [
     'name'              => 'Addon Manager +',
     'description'       => 'Manage ExpressionEngine add-ons from ZIP packages through the control panel.',
-    'version'           => '1.6.0',
+    'version'           => '1.7.0',
     'author'            => 'Javid Fazaeli',
     'author_url'        => 'https://fazaeli.dev',
     'namespace'         => 'JavidFazaeli\AddonInstaller',
@@ -56,6 +57,12 @@ return [
         'OverrideStore' => function($addon) {
             return ee('addon_installer:overrideStore');
         },
+        'compatibilityScanner' => function($addon) {
+            return new CompatibilityScanner();
+        },
+        'CompatibilityScanner' => function($addon) {
+            return ee('addon_installer:compatibilityScanner');
+        },
         'autoFinalizer' => function($addon) {
             return new AutoFinalizer(
                 ee('addon_installer:installAuditor')
@@ -84,7 +91,8 @@ return [
                 ee('addon_installer:githubReleaseChecker'),
                 ee('addon_installer:autoFinalizer'),
                 ee('addon_installer:installAuditor'),
-                ee('addon_installer:overrideStore')
+                ee('addon_installer:overrideStore'),
+                ee('addon_installer:compatibilityScanner')
             );
         },
         'PackageInstaller' => function($addon) {

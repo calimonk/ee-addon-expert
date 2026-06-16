@@ -69,7 +69,8 @@ class OverrideStore
         array $originalRequires,
         array $patchedTo,
         ?string $by = null,
-        ?string $reason = null
+        ?string $reason = null,
+        ?string $scan = null
     ): void {
         $store = $this->load();
 
@@ -89,6 +90,7 @@ class OverrideStore
             'last_applied_at'   => time(),
             'overridden_by'     => $by ?? ($store[$shortName]['overridden_by'] ?? null),
             'reason'            => $reason ?? ($store[$shortName]['reason'] ?? null),
+            'scan'              => $scan ?? ($store[$shortName]['scan'] ?? null),
         ];
 
         $this->store = $store;

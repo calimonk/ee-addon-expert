@@ -55,6 +55,11 @@ $csrfToken = $csrf_token ?? '';
                       title="This add-on's declared requirements were overridden at install. Original: <?= $h(implode(', ', $origStr)) ?>">
                   ⚠ requirement override<?= ! empty($origStr) ? ' (declared ' . $h(implode(', ', $origStr)) . ')' : '' ?>
                 </span>
+                <?php if (! empty($ov['scan'])): ?>
+                  <span class="addi-muted" style="font-size:11.5px;display:block;margin-top:3px">
+                    <strong>Scan at force time:</strong> <?= $h($ov['scan']) ?>
+                  </span>
+                <?php endif; ?>
               </p>
             <?php elseif (! empty($package['compat_issues'])): ?>
               <p style="margin:0 0 8px">

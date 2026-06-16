@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-03
+
+### Added — Compatibility feature scan (informed force)
+- When an add-on is incompatible (declares a newer PHP than the server
+  runs), Addon Manager + now **statically scans the add-on's code** for
+  version-specific PHP syntax and functions and reports whether the
+  code actually uses anything newer than the target — so a force
+  override is an informed decision, not a blind one:
+  - *"Best-effort scan of 31 files: no PHP features newer than 8.2
+    found — appears safe to force."*
+  - *"Best-effort scan found features NEWER than PHP 8.2:
+    json_validate() (PHP 8.3) in Tags/Foo.php. Forcing onto 8.2 will
+    likely fatal when that code runs."*
+- The verdict is shown in the incompatibility message on the Install
+  ZIP screen (right where you decide whether to tick "Override version
+  requirements"), recorded on the override registry entry, surfaced in
+  the Packages override badge ("Scan at force time: …"), and written to
+  the audit log (`scan_verdict` / `scan`).
+- `Service/CompatibilityScanner` — curated, low-false-positive marker
+  set covering PHP 8.0–8.4 (syntax: match, nullsafe, enums, readonly,
+  readonly classes, typed constants, dynamic class-const fetch,
+  `#[Override]`, asymmetric visibility; plus version-introduced
+  functions like `json_validate`, `mb_str_pad`, `array_find`, …).
+  Regex-on-source rather than tokenized — the running tokenizer is the
+  target version and can't recognise syntax newer than itself.
+  Comment-stripped, method/identifier-guarded, bounded to 400 files.
+  Smoke-tested across 11 scenarios incl. false-positive bait
+  (`->match()`, `preg_match()`, `'readonly' => true`) and the real
+  Lasting Impressions Pro 5.0.4 (correctly clear on 8.2).
+
+### Internal
+- `PackageInstaller` gains a `CompatibilityScanner` dependency + a
+  `collectZipPhp()` helper that reads .php entries from the upload zip
+  in-memory (no extraction) for the scan.
+- `OverrideStore::record()` stores the scan verdict alongside the
+  override.
+
 ## [1.6.0] - 2026-06-03
 
 ### Added — Requirement override (force install)

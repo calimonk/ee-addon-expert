@@ -14,6 +14,7 @@ class PackageInstaller
     private ?AutoFinalizer $finalizer = null;
     private ?InstallAuditor $auditor = null;
     private ?OverrideStore $overrides = null;
+    private ?CompatibilityScanner $scanner = null;
 
     public function __construct(
         ?string $addonsPath = null,
@@ -21,7 +22,8 @@ class PackageInstaller
         ?GitHubReleaseChecker $releases = null,
         ?AutoFinalizer $finalizer = null,
         ?InstallAuditor $auditor = null,
-        ?OverrideStore $overrides = null
+        ?OverrideStore $overrides = null,
+        ?CompatibilityScanner $scanner = null
     ) {
         $this->addonsPath = rtrim($addonsPath ?: self::detectAddonsPath(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->sources = $sources;
@@ -29,6 +31,7 @@ class PackageInstaller
         $this->finalizer = $finalizer;
         $this->auditor = $auditor;
         $this->overrides = $overrides;
+        $this->scanner = $scanner;
     }
 
     private function sources(): UpdateSourceRegistry
@@ -79,6 +82,47 @@ class PackageInstaller
                 : new OverrideStore();
         }
         return $this->overrides;
+    }
+
+    private function scanner(): CompatibilityScanner
+    {
+        if ($this->scanner === null) {
+            $this->scanner = function_exists('ee')
+                ? ee('addon_installer:compatibilityScanner')
+                : new CompatibilityScanner();
+        }
+        return $this->scanner;
+    }
+
+    /**
+     * Collect [name => contents] for every .php file under $root inside
+     * an open zip, for the compatibility scanner. Bounded so a hostile
+     * or huge archive can't blow memory.
+     *
+     * @return array<string,string>
+     */
+    private function collectZipPhp(ZipArchive $zip, string $root): array
+    {
+        $files = [];
+        $prefix = rtrim($root, '/') . '/';
+        for ($i = 0; $i < $zip->numFiles && count($files) < 400; $i++) {
+            $name = $zip->getNameIndex($i);
+            if ($name === false || $this->isIgnoredPath($name)) {
+                continue;
+            }
+            $normalized = ltrim(str_replace('\\', '/', $name), '/');
+            if (strncmp($normalized, $prefix, strlen($prefix)) !== 0) {
+                continue;
+            }
+            if (substr($normalized, -4) !== '.php') {
+                continue;
+            }
+            $contents = $zip->getFromName($name);
+            if (is_string($contents) && $contents !== '') {
+                $files[substr($normalized, strlen($prefix))] = $contents;
+            }
+        }
+        return $files;
     }
 
     public static function detectAddonsPath(): string
@@ -406,13 +450,34 @@ class PackageInstaller
             // recorded + badged + audited.
             $requires = (array) ($info['metadata']['requires'] ?? []);
             $issues = self::checkRequirements($requires);
+
+            // When incompatible, run the heuristic feature scan so the
+            // verdict ("appears safe to force" / "uses json_validate()")
+            // is available both for the refuse message and, if forced,
+            // the override record + audit trail. Scoped to the PHP
+            // target (the running version) so it reports only features
+            // newer than what this server can run.
+            $scan = null;
+            if (! empty($issues)) {
+                try {
+                    $scan = $this->scanner()->scanFiles(
+                        $this->collectZipPhp($zip, $info['root']),
+                        PHP_VERSION
+                    );
+                } catch (\Throwable $e) {
+                    // Scan is advisory; failure must not block the flow.
+                }
+            }
+
             if (! empty($issues) && ! $overrideRequirements) {
-                throw new RuntimeException(
-                    'This package cannot be installed on this server: '
+                $msg = 'This package cannot be installed on this server: '
                     . implode(' ', $issues)
-                    . ' (Declared in the add-on\'s addon.setup.php; EE would refuse to install it too.'
-                    . ' Tick "Override version requirements" to force it anyway.)'
-                );
+                    . ' (Declared in the add-on\'s addon.setup.php; EE would refuse to install it too.)';
+                if ($scan !== null) {
+                    $msg .= ' — ' . $scan['summary'];
+                }
+                $msg .= ' Tick "Override version requirements" to force it anyway.';
+                throw new RuntimeException($msg);
             }
 
             if (is_dir($targetPath) && ! $overwrite) {
@@ -511,7 +576,9 @@ class PackageInstaller
                             ? PHP_VERSION
                             : (defined('APP_VER') ? APP_VER : '');
                     }
-                    $this->overrides()->record($shortName, $original, $patchedTo, $by, $overrideReason);
+                    $scanSummary = $scan['summary'] ?? null;
+                    $scanVerdict = $scan['verdict'] ?? null;
+                    $this->overrides()->record($shortName, $original, $patchedTo, $by, $overrideReason, $scanSummary);
 
                     try {
                         $this->auditor()->record([
@@ -522,6 +589,8 @@ class PackageInstaller
                             'original'     => $original,
                             'patched_to'   => $patchedTo,
                             'reason'       => $overrideReason,
+                            'scan_verdict' => $scanVerdict,
+                            'scan'         => $scanSummary,
                             'is_self'      => $shortName === 'addon_installer',
                         ]);
                     } catch (\Throwable $e) {
