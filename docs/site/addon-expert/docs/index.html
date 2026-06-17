@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Addon Expert — Documentation · Codebit</title>
+<meta name="description" content="Documentation for Addon Expert — installing from ZIP, tracking GitHub releases, one-click updates, supply-chain protection, and compatibility overrides for ExpressionEngine 7.">
+<meta name="author" content="Codebit">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://codebit.nl/addon-expert/docs">
+<meta property="og:title" content="Addon Expert — Documentation">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d0f12'/><text x='16' y='23' font-family='ui-monospace,SFMono-Regular,Menlo,monospace' font-size='17' font-weight='700' fill='%231abfb0' text-anchor='middle'>AE</text></svg>">
+
+<style>
+  :root {
+    --bg: #0d0f12; --surface: #161a1f; --surface-2: #1d2228; --border: #262c34;
+    --text: #e6e8eb; --muted: #9aa0a6; --accent: #1abfb0; --accent-strong: #2dd4bf; --warn: #f59e0b; --maxw: 860px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent-strong); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; color: #cdd2d8; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 13.5px; line-height: 1.55; color: #cdd2d8; }
+  pre code { background: transparent; padding: 0; }
+  .container { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  .crumbs { border-bottom: 1px solid var(--border); padding: 14px 0; font-size: 13.5px; color: var(--muted); }
+  .crumbs a { color: var(--muted); }
+  .crumbs a:hover { color: var(--text); text-decoration: none; }
+  .crumbs .sep { color: #4a525c; margin: 0 6px; }
+  .crumbs .here { color: var(--text); }
+  .head { padding: 52px 0 30px; border-bottom: 1px solid var(--border); background: radial-gradient(700px 280px at 20% -10%, rgba(26,191,176,0.08), transparent 60%), var(--bg); }
+  .head h1 { font-size: clamp(28px, 4.4vw, 38px); line-height: 1.12; margin: 0 0 12px; letter-spacing: -0.01em; }
+  .head p.lede { font-size: 17px; color: var(--muted); max-width: 62ch; margin: 0; }
+  .toc { margin: 30px 0 0; padding: 18px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .toc h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 0 0 10px; }
+  .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  .toc li { margin: 0 0 6px; font-size: 14.5px; }
+  .doc { padding: 8px 0 20px; }
+  .doc section { padding: 34px 0; border-bottom: 1px solid var(--border); }
+  .doc section:last-child { border-bottom: none; }
+  .doc h2 { font-size: 23px; letter-spacing: -0.01em; margin: 0 0 14px; scroll-margin-top: 20px; }
+  .doc h3 { font-size: 17px; margin: 22px 0 8px; color: var(--text); }
+  .doc p { color: #d3d7dc; margin: 0 0 12px; }
+  .doc ul { margin: 0 0 12px; padding-left: 22px; }
+  .doc li { color: #c8ccd2; margin: 0 0 6px; line-height: 1.55; }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 14.5px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 6px 0 14px; }
+  .doc th, .doc td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .doc th { background: var(--surface); color: var(--text); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { color: #c8ccd2; }
+  .note { background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.28); border-radius: 8px; padding: 12px 16px; color: #e7d9bd; font-size: 14.5px; margin: 6px 0 14px; }
+  .note strong { color: var(--warn); }
+  footer { padding: 28px 0 56px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--border); }
+  footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+  @media (max-width: 720px) { .head { padding: 40px 0 26px; } .toc ol { columns: 1; } footer .container { justify-content: center; text-align: center; } }
+</style>
+</head>
+<body>
+
+<nav class="crumbs">
+  <div class="container">
+    <a href="/">Codebit</a>
+    <span class="sep">›</span>
+    <a href="/addon-expert">Addon Expert</a>
+    <span class="sep">›</span>
+    <span class="here">Documentation</span>
+  </div>
+</nav>
+
+<header class="head">
+  <div class="container">
+    <h1>Documentation</h1>
+    <p class="lede">Addon Expert installs, updates, and tracks ExpressionEngine add-ons from the control panel — ZIP uploads, GitHub releases, one-click updates, supply-chain checks, and compatibility overrides. This covers every screen and how the pieces fit.</p>
+    <div class="toc">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#install">Install Addon Expert</a></li>
+        <li><a href="#zip">Install from ZIP</a></li>
+        <li><a href="#packages">Packages</a></li>
+        <li><a href="#releases">Tracking GitHub releases</a></li>
+        <li><a href="#oneclick">One-click update &amp; auto-finalize</a></li>
+        <li><a href="#supplychain">Supply-chain protection</a></li>
+        <li><a href="#compat">Compatibility &amp; force override</a></li>
+        <li><a href="#settings">Settings &amp; CP menu</a></li>
+        <li><a href="#data">Where data lives</a></li>
+        <li><a href="#security">Security &amp; requirements</a></li>
+      </ol>
+    </div>
+  </div>
+</header>
+
+<div class="doc">
+  <div class="container">
+
+    <section id="install">
+      <h2>Install Addon Expert</h2>
+      <p>Copy the <code>addon_expert/</code> folder into <code>system/user/addons/</code>, then open <strong>Developer → Add-Ons</strong> in the control panel, find <strong>Addon Expert</strong>, and click Install. Its screens then live under <strong>Developer → Add-Ons → Addon Expert</strong>: Install ZIP, Packages, Releases, Audit Log, and Settings.</p>
+      <p>Upgrading from the original <strong>Addon Manager +</strong> (<code>addon_installer</code>)? Install Addon Expert and your config — GitHub mappings, trust anchors, settings, overrides, and the release cache — is copied across automatically. Confirm it carried over, then uninstall the old add-on.</p>
+    </section>
+
+    <section id="zip">
+      <h2>1. Install from ZIP</h2>
+      <p>Upload an add-on ZIP and Addon Expert detects the real add-on folder from its <code>addon.setup.php</code> and extracts it into the add-ons directory — no FTP.</p>
+      <ul>
+        <li>The ZIP may contain a wrapper folder, e.g. <code>vendor-package/my_addon/addon.setup.php</code>; the folder holding <code>addon.setup.php</code> is used.</li>
+        <li>Loose add-on files at the ZIP root are rejected — there's no folder name to install into.</li>
+        <li>The detected folder name must use lowercase letters, numbers, and underscores.</li>
+        <li><strong>Overwrite</strong> replaces an existing folder of the same short name.</li>
+      </ul>
+      <h3>Inspect before commit</h3>
+      <p>The upload is inspected and scanned <em>before</em> anything is written. A compatible package extracts and installs straight through. An incompatible one (declaring a newer PHP/EE than your server) is <strong>held</strong> on a confirm screen showing the unmet requirement, a compatibility-scan verdict, and a one-click Force or Cancel — so a wrong-environment package never silently lands, and you never re-select the file. See <a href="#compat">Compatibility &amp; force override</a>.</p>
+    </section>
+
+    <section id="packages">
+      <h2>2. Packages</h2>
+      <p>Every detected package appears as a card. Actions use ExpressionEngine's own install / update / settings / uninstall flow.</p>
+      <table>
+        <tr><th>Badge</th><th>Meaning</th></tr>
+        <tr><td>Installed / Not Installed</td><td>Whether EE currently has the add-on installed.</td></tr>
+        <tr><td>Update Available</td><td>Newer files are on disk than EE has recorded.</td></tr>
+        <tr><td><code>GitHub: vX.Y.Z ↗</code></td><td>A newer release exists on the mapped repo — links to it.</td></tr>
+        <tr><td>⚠ incompatible</td><td>The package's declared PHP/EE requirement isn't met here.</td></tr>
+        <tr><td>⚠ requirement override</td><td>Force-installed past its requirement; shows the original requirement and the scan verdict from force time.</td></tr>
+      </table>
+      <p>The <strong>Download</strong> action exports any detected add-on as a ZIP, generated on demand and not stored.</p>
+    </section>
+
+    <section id="releases">
+      <h2>3. Tracking GitHub releases</h2>
+      <p>Point an add-on at a GitHub repo and Addon Expert polls <code>/releases/latest</code>, compares it to the installed version, and surfaces a pending-update badge plus a sidebar count.</p>
+      <h3>Author-declared</h3>
+      <p>An add-on's <code>addon.setup.php</code> can declare its own source:</p>
+      <pre><code>'github_repo' =&gt; 'owner/repo',</code></pre>
+      <p>Shown read-only on the Releases screen — no admin action needed.</p>
+      <h3>Admin-mapped</h3>
+      <p>For add-ons whose author didn't declare one, type <code>owner/repo</code> into the Releases row. Saved to <code>system/user/config/addon_expert_mappings.json</code>. A manifest declaration always wins over an admin mapping.</p>
+      <h3>Caching</h3>
+      <p>Results cache for 1 hour; stale entries refresh in parallel when the Releases screen loads. <strong>Check for updates</strong> forces a full refresh of every mapping. GitHub API calls are unauthenticated — public repos only (60 requests/hour per IP, far above any real site's needs).</p>
+    </section>
+
+    <section id="oneclick">
+      <h2>4. One-click update &amp; auto-finalize</h2>
+      <p>When a newer release exists, install it in one click. Addon Expert:</p>
+      <ul>
+        <li>Picks a download URL — a release asset named after the add-on, then any <code>.zip</code> asset, then the source zipball. Downloads are capped at 100&nbsp;MB.</li>
+        <li>Safe-extracts into a staging folder (same path checks as the upload flow), locating the add-on subtree even in a wrapper or source zipball.</li>
+        <li>Moves the previous version to a backup under <code>system/user/cache/addon_expert/backups/</code> — outside the add-ons directory, so EE never tries to load it. One rolling backup per add-on.</li>
+        <li>Invalidates PHP opcache for the new files so the next request runs the new code.</li>
+      </ul>
+      <h3>Auto-finalize</h3>
+      <p>After the swap, the EE-side update step (the add-on's <code>upd.php</code> plus the version-row bump) runs <strong>automatically</strong> the next time you load an Addon Expert screen — so you don't have to go to Developer → Add-Ons and click Update. This applies to manual ZIP uploads too. A banner reports the from→to versions, or "nothing to do" if the version already matched. Toggle it in <a href="#settings">Settings</a>.</p>
+    </section>
+
+    <section id="supplychain">
+      <h2>5. Supply-chain protection</h2>
+      <p>A GitHub repo can change hands, or be deleted and re-claimed under the same <code>owner/repo</code> name (RepoJacking). Addon Expert treats every install as a supply-chain decision.</p>
+      <ul>
+        <li>On the first install of a mapped add-on it pins the repo's stable numeric identity — owner ID, repo ID, created date — to <code>system/user/config/addon_expert_trust.json</code>.</li>
+        <li>Every install re-fetches that identity from GitHub (bypassing cache) and <strong>hard-blocks</strong> if it changed. A username rename does <em>not</em> trip it — the numeric ID is stable — only a real ownership transfer or a delete+recreate.</li>
+        <li>The Releases screen shows the trust state per add-on (<code>✓ trusted</code> / <code>⚠ CHANGED</code> / <code>unverified</code>), with a <strong>Reconfirm trust</strong> action to accept a legitimate change. Reconfirming is itself audit-logged.</li>
+      </ul>
+      <h3>Audit log</h3>
+      <p>Every install, failure, block, trust pin, override, and auto-finalize is written to <code>system/user/cache/addon_expert/install.log</code> (JSONL) and shown on the <strong>Audit Log</strong> screen — with per-event-type counts, a self-update flag, and grep recipes for the raw file.</p>
+    </section>
+
+    <section id="compat">
+      <h2>6. Compatibility &amp; force override</h2>
+      <p>ExpressionEngine refuses to install an add-on that declares a newer PHP or EE than the server runs. Addon Expert reads the same <code>requires</code> block and surfaces that verdict earlier — before extracting on upload, and before the swap on a GitHub install.</p>
+      <h3>Forcing an over-declared requirement</h3>
+      <p>Sometimes an author sets a conservative baseline the code doesn't actually need. When you choose <strong>Override version requirements</strong>, Addon Expert first runs a heuristic <strong>feature scan</strong> of the package's PHP and tells you whether anything newer than your version is actually used:</p>
+      <ul>
+        <li><em>"No PHP 8.3 features detected — appears safe to force."</em></li>
+        <li><em>"Uses <code>json_validate()</code> (PHP 8.3) — forcing onto 8.2 will fatal when that code runs."</em></li>
+      </ul>
+      <p>Forcing patches the add-on's declared requirement so EE accepts it, records the original, flags the add-on with a requirement-override badge, and re-applies the patch on future updates.</p>
+      <div class="note"><strong>Best-effort.</strong> The scan reads source patterns; it can't see dynamic calls (<code>call_user_func('json_validate', …)</code>) or <code>eval</code>. Treat it as an informed signal, not a guarantee — and remember that forcing an add-on that genuinely uses newer syntax will fatal at runtime.</div>
+    </section>
+
+    <section id="settings">
+      <h2>7. Settings &amp; CP menu</h2>
+      <ul>
+        <li><strong>Custom-menu integration</strong> — show Addon Expert in the CP Custom menu with a configurable label (default "Addons") and an optional pending-update count, e.g. <code>Addons (3)</code>. You add the entry once via <strong>Settings → Menu Manager</strong> (a core EE page); Addon Expert can't force itself into the menu.</li>
+        <li><strong>Auto-finalize</strong> the EE-side update after an install (default on).</li>
+        <li><strong>Lazy refresh</strong> of stale release caches when the Releases screen loads (default on).</li>
+      </ul>
+    </section>
+
+    <section id="data">
+      <h2>8. Where data lives</h2>
+      <table>
+        <tr><th>Path</th><th>Contents</th></tr>
+        <tr><td><code>system/user/config/addon_expert_mappings.json</code></td><td>Admin repo mappings</td></tr>
+        <tr><td><code>system/user/config/addon_expert_trust.json</code></td><td>Pinned trust anchors</td></tr>
+        <tr><td><code>system/user/config/addon_expert_overrides.json</code></td><td>Requirement overrides</td></tr>
+        <tr><td><code>system/user/config/addon_expert_settings.json</code></td><td>Settings-screen options</td></tr>
+        <tr><td><code>system/user/cache/addon_expert/</code></td><td>Release cache, audit log, backups, and held uploads</td></tr>
+      </table>
+      <p>All of it is plain files on your server — nothing is sent anywhere except the public GitHub API calls described above.</p>
+    </section>
+
+    <section id="security">
+      <h2>9. Security &amp; requirements</h2>
+      <ul>
+        <li>Requires ExpressionEngine 7, PHP <code>ZipArchive</code> (uploads) and <code>cURL</code> (GitHub downloads).</li>
+        <li>Absolute paths, drive-letter paths, and <code>..</code> traversal are rejected before extraction.</li>
+        <li>Uploaded add-on PHP is never executed to read its metadata — it's parsed as text.</li>
+        <li>ExpressionEngine still controls the final install/update step, with its own permission and CSRF checks.</li>
+        <li>Don't grant control-panel access to untrusted users — extracted add-on code runs with full add-on privileges.</li>
+      </ul>
+      <p>Addon Expert is MIT-licensed and developed in the open at <a href="https://github.com/calimonk/ee-addon-expert" target="_blank" rel="noopener">github.com/calimonk/ee-addon-expert</a>. It's a maintained fork of <a href="https://github.com/jfaza/addon-manager-plus" target="_blank" rel="noopener">Addon Manager +</a> by Javid Fazaeli.</p>
+    </section>
+
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <span>© <span id="year">2026</span> Codebit by Nivoli</span>
+    <span>
+      <a href="/addon-expert">Addon Expert</a>
+      &nbsp;·&nbsp;
+      <a href="/addon-expert/support">Support</a>
+      &nbsp;·&nbsp;
+      <a href="/addon-expert/changelog">Changelog</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/calimonk/ee-addon-expert">GitHub</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

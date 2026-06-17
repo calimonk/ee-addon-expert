@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Addon Expert — Support · Codebit</title>
+<meta name="description" content="Support for Addon Expert — FAQ, common issues, and how to get help with the add-on manager for ExpressionEngine.">
+<meta name="author" content="Codebit">
+
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://codebit.nl/addon-expert/support">
+<meta property="og:title" content="Addon Expert — Support">
+<meta property="og:description" content="FAQ, common issues, and how to get help with Addon Expert for ExpressionEngine.">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d0f12'/><text x='16' y='23' font-family='ui-monospace,SFMono-Regular,Menlo,monospace' font-size='17' font-weight='700' fill='%231abfb0' text-anchor='middle'>AE</text></svg>">
+
+<style>
+  :root {
+    --bg: #0d0f12; --surface: #161a1f; --surface-2: #1d2228; --border: #262c34;
+    --text: #e6e8eb; --muted: #9aa0a6; --accent: #1abfb0; --accent-strong: #2dd4bf; --maxw: 880px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent-strong); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; color: #cdd2d8; }
+  .container { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  .crumbs { border-bottom: 1px solid var(--border); padding: 14px 0; font-size: 13.5px; color: var(--muted); }
+  .crumbs a { color: var(--muted); }
+  .crumbs a:hover { color: var(--text); text-decoration: none; }
+  .crumbs .sep { color: #4a525c; margin: 0 6px; }
+  .crumbs .here { color: var(--text); }
+  .head { padding: 56px 0 32px; border-bottom: 1px solid var(--border); background: radial-gradient(700px 280px at 20% -10%, rgba(26,191,176,0.08), transparent 60%), var(--bg); }
+  .head h1 { font-size: clamp(28px, 4.4vw, 38px); line-height: 1.12; margin: 0 0 14px; letter-spacing: -0.01em; }
+  .head p.lede { font-size: 18px; color: var(--muted); max-width: 60ch; margin: 0; }
+  .section { padding: 44px 0; border-bottom: 1px solid var(--border); }
+  .section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin: 0 0 24px; font-weight: 600; }
+  .contact { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .channel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 22px 24px; }
+  .channel h3 { margin: 0 0 6px; font-size: 17px; }
+  .channel p { margin: 0 0 12px; color: #c8ccd2; font-size: 14.5px; }
+  .channel a.btn { display: inline-block; background: var(--accent); color: #04201d; font-weight: 600; padding: 9px 16px; border-radius: 7px; font-size: 14px; }
+  .channel a.btn:hover { background: var(--accent-strong); text-decoration: none; }
+  .channel a.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .channel a.btn.ghost:hover { background: var(--surface-2); }
+  .channel .sla { display: block; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  details summary { padding: 14px 18px; cursor: pointer; font-weight: 500; color: var(--text); list-style: none; user-select: none; transition: background 120ms ease; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "▸ "; color: var(--muted); font-size: 12px; margin-right: 4px; }
+  details[open] summary::before { content: "▾ "; }
+  details summary:hover { background: var(--surface-2); }
+  details .body { padding: 4px 18px 18px; color: #c8ccd2; font-size: 15.5px; }
+  details .body p { margin: 0 0 8px; }
+  details .body p:last-child { margin-bottom: 0; }
+  footer { padding: 32px 0 56px; color: var(--muted); font-size: 14px; }
+  footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+  @media (max-width: 720px) {
+    .head { padding: 44px 0 28px; } .section { padding: 36px 0; }
+    .contact { grid-template-columns: 1fr; } footer .container { justify-content: center; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="crumbs">
+  <div class="container">
+    <a href="/">Codebit</a>
+    <span class="sep">›</span>
+    <a href="/addon-expert">Addon Expert</a>
+    <span class="sep">›</span>
+    <span class="here">Support</span>
+  </div>
+</nav>
+
+<header class="head">
+  <div class="container">
+    <h1>Support &amp; FAQ</h1>
+    <p class="lede">Most questions are answered by the docs or the in-CP help text. Addon Expert is open source, so the fastest path for a bug or feature request is a GitHub issue — skim the FAQ below first.</p>
+  </div>
+</header>
+
+<section class="section">
+  <div class="container">
+    <h2>Get in touch</h2>
+    <div class="contact">
+      <div class="channel">
+        <h3>GitHub issues</h3>
+        <p>Bugs, feature requests, and questions — the best place, because it's public and searchable. Include your EE version, the Addon Expert version, what you did, and the error or a screenshot.</p>
+        <a class="btn" href="https://github.com/calimonk/ee-addon-expert/issues">Open an issue</a>
+        <span class="sla">Best-effort — typically a reply within a few days.</span>
+      </div>
+      <div class="channel">
+        <h3>Email</h3>
+        <p>If you'd rather not use GitHub, or it's a private/site-specific matter, email works too.</p>
+        <a class="btn ghost" href="mailto:calimonk@codebit.nl?subject=Addon%20Expert%20-%20support">calimonk@codebit.nl</a>
+        <span class="sla">Best-effort, often same-day on weekdays.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Before you ask</h2>
+    <p style="color:#c8ccd2;margin:0 0 18px">Most issues are one of these.</p>
+
+    <details>
+      <summary>An install is blocked with a "trust check failed" / repo identity changed message</summary>
+      <div class="body">
+        <p>That's the supply-chain guard doing its job. On the first install of a GitHub-mapped add-on, Addon Expert pins the repo's stable numeric identity (owner ID, repo ID, created date). If those change later, it blocks the install — that pattern matches an ownership transfer or a deleted-and-recreated repo (RepoJacking).</p>
+        <p>If you <em>know</em> the change is legitimate (the maintainer transferred the repo, or you intentionally moved to a fork), use <strong>Reconfirm trust</strong> on the Releases screen to pin the new identity, then install. The reconfirm is itself written to the Audit Log. A username rename alone does <em>not</em> trip this — the numeric owner ID is stable across renames.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>"This package cannot be installed — requires PHP 8.3" (or a newer EE)</summary>
+      <div class="body">
+        <p>The add-on's <code>addon.setup.php</code> declares a higher PHP/EE requirement than your server runs, and EE itself would refuse it too. Addon Expert surfaces this <em>before</em> extracting. The right fix is to upgrade PHP/EE to meet the requirement.</p>
+        <p>If you believe the author over-declared (the code doesn't actually use the newer version), tick <strong>Override version requirements</strong> — Addon Expert holds the upload, scans the code, and tells you whether anything newer than your version is actually used. Forcing patches the declared requirement so EE accepts it, and flags the add-on with an override badge. The scan is best-effort: it can't see dynamic calls, so verify before relying on it.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>I installed/updated, but EE still shows "Update Available" — do I have to click it?</summary>
+      <div class="body">
+        <p>No — that's what <strong>auto-finalize</strong> is for, and it's on by default. After Addon Expert swaps the files, the next time you load one of its screens it runs EE's update step (the add-on's <code>upd.php</code> + the version-row bump) automatically. If you've just installed and the banner is still there, load the Packages or Releases screen once. If it persists, check Settings → "Auto-finalize" is enabled, and look at the Audit Log for an <code>auto_finalize_failed</code> entry with the error.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>A ZIP upload "worked" but the new version didn't take effect</summary>
+      <div class="body">
+        <p>PHP opcache can briefly serve the old <code>addon.setup.php</code> after a swap; Addon Expert invalidates it, but a very aggressive opcache config (or <code>validate_timestamps=0</code>) can still delay things. Reload the screen once. The Audit Log records the install either way, and the auto-finalize banner shows the from→to versions or a "nothing to do" note so you always know what happened.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>I upgraded from "Addon Manager +" — did I lose my settings?</summary>
+      <div class="body">
+        <p>No. Addon Expert uses a new short name (<code>addon_expert</code>), so EE treats it as a separate add-on — but on install it <strong>copies</strong> your existing config from the old <code>addon_installer</code> (GitHub mappings, trust anchors, settings, requirement overrides, and the release cache) to the new names. The originals are left untouched, so the old add-on keeps working until you uninstall it and a rollback loses nothing. After confirming everything carried over, uninstall the old "Addon Manager +" and re-add the CP custom-menu entry (it points at the new short name).</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>The "Addons" entry isn't showing in my CP Custom menu</summary>
+      <div class="body">
+        <p>Addon Expert can't force itself into the Custom menu — EE keeps that admin-controlled. Add it once via <strong>Settings → Menu Manager</strong> (a CP page, not the add-on's own Settings). Then Addon Expert's hook renders the label with a pending-update count, e.g. <code>Addons (3)</code>. You can change the label and toggle the count under Addon Expert → Settings.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>How do I roll back a bad update?</summary>
+      <div class="body">
+        <p>One-click GitHub updates keep a backup of the previous version under <code>system/user/cache/addon_expert/backups/&lt;short_name&gt;/&lt;timestamp&gt;/</code> (outside the add-ons directory). To roll back, replace <code>system/user/addons/&lt;short_name&gt;/</code> with the backed-up copy and load a CP page so EE re-reads the version. You can also just install any previous release from that add-on's GitHub releases tab.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Is it really free? Can I read the source?</summary>
+      <div class="body">
+        <p>Yes — Addon Expert is MIT licensed and the full source is public at <a href="https://github.com/calimonk/ee-addon-expert" target="_blank" rel="noopener">github.com/calimonk/ee-addon-expert</a>. Every release is free, with no license keys or per-site limits. Fork it, read it, send a pull request. It's a maintained fork of <a href="https://github.com/jfaza/addon-manager-plus" target="_blank" rel="noopener">Addon Manager +</a> by Javid Fazaeli.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Does it phone home / send my data anywhere?</summary>
+      <div class="body">
+        <p>The only outbound calls are to the public GitHub API — to check <code>/releases/latest</code> and verify repo identity for add-ons you've mapped — and to download a release when you click install. Calls are unauthenticated (public repos only). Nothing about your site is sent anywhere; the audit log and caches stay on your server.</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="section" style="border-bottom:none">
+  <div class="container">
+    <h2>Other links</h2>
+    <p style="color:#c8ccd2;margin:0">
+      <a href="/addon-expert/docs">Full documentation</a> ·
+      <a href="/addon-expert/changelog">Changelog</a> ·
+      <a href="https://github.com/calimonk/ee-addon-expert">GitHub</a> ·
+      <a href="/addon-expert">Back to product overview</a>
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <span>© <span id="year">2026</span> Codebit by Nivoli</span>
+    <span>
+      <a href="/addon-expert">Addon Expert</a>
+      &nbsp;·&nbsp;
+      <a href="/addon-expert/docs">Docs</a>
+      &nbsp;·&nbsp;
+      <a href="mailto:calimonk@codebit.nl">calimonk@codebit.nl</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

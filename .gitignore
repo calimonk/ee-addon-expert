@@ -9,3 +9,7 @@ node_modules/
 *.log
 *.tmp
 *.zip
+
+# codebit.nl page assets are copies of docs/screenshots + icon.svg — not tracked
+docs/site/addon-expert/screenshots/
+docs/site/addon-expert/icon.svg

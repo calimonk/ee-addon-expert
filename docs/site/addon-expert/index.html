@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Addon Expert — install, update &amp; track ExpressionEngine 7 add-ons · Codebit</title>
+<meta name="description" content="Addon Expert manages your ExpressionEngine add-ons from one control-panel: upload ZIPs, watch GitHub releases, update in one click, with supply-chain checks and a compatibility scanner. Free, MIT, open source.">
+<meta name="author" content="Codebit">
+
+<meta property="og:type" content="product">
+<meta property="og:url" content="https://codebit.nl/addon-expert">
+<meta property="og:title" content="Addon Expert — install, update & track ExpressionEngine add-ons">
+<meta property="og:description" content="One control-panel home for installing, updating, and tracking EE add-ons — ZIP uploads, GitHub releases, one-click updates, supply-chain checks. Free & open source.">
+<meta property="og:image" content="https://codebit.nl/images/codebit.png">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Addon Expert — for ExpressionEngine">
+<meta name="twitter:description" content="Install, update, and track EE add-ons from one place. Free & open source.">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d0f12'/><text x='16' y='23' font-family='ui-monospace,SFMono-Regular,Menlo,monospace' font-size='17' font-weight='700' fill='%231abfb0' text-anchor='middle'>AE</text></svg>">
+
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #161a1f;
+    --surface-2: #1d2228;
+    --border: #262c34;
+    --text: #e6e8eb;
+    --muted: #9aa0a6;
+    --accent: #1abfb0;
+    --accent-strong: #2dd4bf;
+    --warn: #f59e0b;
+    --radius: 10px;
+    --maxw: 960px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  a { color: var(--accent-strong); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #cdd2d8;
+  }
+  .container { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  .crumbs { border-bottom: 1px solid var(--border); padding: 14px 0; font-size: 13.5px; color: var(--muted); }
+  .crumbs a { color: var(--muted); }
+  .crumbs a:hover { color: var(--text); text-decoration: none; }
+  .crumbs .sep { color: #4a525c; margin: 0 6px; }
+  .crumbs .here { color: var(--text); }
+
+  .hero {
+    padding: 56px 0 40px;
+    border-bottom: 1px solid var(--border);
+    background: radial-gradient(900px 360px at 30% -10%, rgba(26,191,176,0.10), transparent 60%), var(--bg);
+  }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .badge { font-size: 11.5px; color: var(--accent-strong); background: rgba(45,212,191,0.08); border: 1px solid rgba(45,212,191,0.25); padding: 3px 10px; border-radius: 999px; letter-spacing: 0.02em; }
+  .badge.neutral { color: var(--muted); background: var(--surface-2); border-color: var(--border); }
+  .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.12; margin: 0 0 14px; letter-spacing: -0.015em; }
+  .hero p.lede { font-size: 19px; color: #c8ccd2; max-width: 64ch; margin: 0 0 28px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .cta { display: inline-block; background: var(--accent); color: #04201d; font-weight: 600; padding: 12px 22px; border-radius: 8px; transition: background 120ms ease, transform 120ms ease; }
+  .cta:hover { background: var(--accent-strong); text-decoration: none; transform: translateY(-1px); }
+  .cta.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .cta.ghost:hover { background: var(--surface); color: var(--text); transform: translateY(-1px); }
+  .price { font-size: 14px; color: var(--muted); margin-left: 6px; }
+  .price strong { color: var(--text); font-weight: 600; }
+
+  .section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+  .section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin: 0 0 28px; font-weight: 600; }
+  .section h3 { font-size: 20px; letter-spacing: -0.005em; margin: 0 0 10px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .feature { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; }
+  .feature h3 { font-size: 17px; margin: 0 0 8px; color: var(--text); }
+  .feature p { margin: 0; color: #c8ccd2; font-size: 15px; line-height: 1.55; }
+
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .mode { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+  .mode h3 { font-size: 15px; margin: 0 0 6px; color: var(--accent-strong); letter-spacing: 0; }
+  .mode p { margin: 0; color: #c8ccd2; font-size: 14.5px; line-height: 1.55; }
+
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 16px; }
+  .fact { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .fact .v { display: block; font-size: 22px; font-weight: 600; color: var(--accent-strong); line-height: 1.1; }
+  .fact .l { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+  .price-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; text-align: center; }
+  .price-card .amount { display: block; font-size: 40px; font-weight: 600; color: var(--text); letter-spacing: -0.015em; }
+  .price-card .terms { color: var(--muted); font-size: 14.5px; margin: 6px 0 22px; }
+  .price-card ul { list-style: none; padding: 0; margin: 0 0 22px; text-align: left; max-width: 30em; margin-inline: auto; }
+  .price-card li { padding: 5px 0 5px 26px; position: relative; color: #c8ccd2; font-size: 14.5px; }
+  .price-card li::before { content: "✓"; position: absolute; left: 4px; top: 5px; color: var(--accent); font-weight: 700; }
+
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .shot { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .15s ease, transform .15s ease; }
+  .shot:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .shot a { display: block; line-height: 0; }
+  .shot img { width: 100%; height: auto; display: block; border-bottom: 1px solid var(--border); }
+  .shot figcaption { padding: 12px 16px; font-size: 14px; color: var(--muted); line-height: 1.45; }
+  .shot figcaption strong { color: var(--text); font-weight: 600; }
+
+  footer { padding: 32px 0 56px; color: var(--muted); font-size: 14px; }
+  footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 720px) {
+    .hero { padding: 44px 0 36px; }
+    .section { padding: 44px 0; }
+    .grid-2, .modes, .facts, .shots { grid-template-columns: 1fr; }
+    .facts { grid-template-columns: 1fr 1fr; }
+    footer .container { justify-content: center; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="crumbs">
+  <div class="container">
+    <a href="/">Codebit</a>
+    <span class="sep">›</span>
+    <span class="here">Addon Expert</span>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="badges">
+      <span class="badge">ExpressionEngine 7</span>
+      <span class="badge neutral">v2.1.1 · MIT</span>
+      <span class="badge neutral">Free &amp; open source</span>
+    </div>
+    <h1>Install, update, and track every add-on from one place.</h1>
+    <p class="lede">Addon Expert is the add-on that manages your add-ons. Upload a ZIP, watch a GitHub repo for new releases, update in one click, and let it finalize ExpressionEngine's update step for you — with supply-chain checks and a compatibility scan before anything touches your site.</p>
+    <div class="cta-row">
+      <a class="cta" href="https://github.com/calimonk/ee-addon-expert/releases/latest">Download the latest release</a>
+      <a class="cta ghost" href="/addon-expert/docs">Read the docs</a>
+      <span class="price"><strong>Free</strong> · MIT · ExpressionEngine 7</span>
+    </div>
+  </div>
+</header>
+
+<section class="section">
+  <div class="container">
+    <h2>One home for every add-on, wherever it came from</h2>
+    <div class="modes">
+      <div class="mode">
+        <h3>From a ZIP</h3>
+        <p>Drop in a package and Addon Expert finds the real add-on folder — even nested inside a wrapper — validates the paths, and extracts it into place. No FTP.</p>
+      </div>
+      <div class="mode">
+        <h3>From GitHub</h3>
+        <p>Map an add-on to a GitHub repo (or let the author declare it) and get a "new version available" badge plus a sidebar count. One click downloads and installs it.</p>
+      </div>
+      <div class="mode">
+        <h3>Safely</h3>
+        <p>Every install is verified: the source repo's identity is pinned, version requirements are checked, and the EE-side update is finalized for you — all audit-logged.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>What it does</h2>
+    <div class="grid-2">
+      <div class="feature">
+        <h3>Install from ZIP</h3>
+        <p>Upload an add-on package and it detects the folder containing <code>addon.setup.php</code> (even inside a wrapper), rejects unsafe paths, and extracts it into <code>system/user/addons/</code>.</p>
+      </div>
+      <div class="feature">
+        <h3>Track GitHub releases</h3>
+        <p>Map any add-on to a GitHub repo — author-declared in <code>addon.setup.php</code> or admin-mapped on the Releases screen. A daily-fresh check surfaces a <code>GitHub: vX.Y.Z ↗</code> badge and a pending-update count in the sidebar.</p>
+      </div>
+      <div class="feature">
+        <h3>One-click update &amp; auto-finalize</h3>
+        <p>Download, swap, and keep a backup of the previous version — then run EE's own update step automatically, so you never have to click through Developer → Add-Ons. Works for GitHub installs and manual uploads alike.</p>
+      </div>
+      <div class="feature">
+        <h3>Supply-chain protection</h3>
+        <p>On first install, the repo's stable GitHub identity is pinned. Every later install re-checks it and <strong>hard-blocks</strong> if it changed — catching ownership transfers and RepoJacking — with a "reconfirm" path for legitimate changes.</p>
+      </div>
+      <div class="feature">
+        <h3>Compatibility checks &amp; force</h3>
+        <p>Refuses to install an add-on that needs a newer PHP/EE than your server runs. Choose to force it and Addon Expert scans the code first, telling you whether it's actually safe — "no PHP 8.3 features detected" vs "uses <code>json_validate()</code> — will fatal."</p>
+      </div>
+      <div class="feature">
+        <h3>Audit log &amp; CP menu</h3>
+        <p>An append-only JSONL log records every install, block, trust pin, and override. An optional Custom-menu entry surfaces the pending-update count right in the sidebar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>See it in action</h2>
+    <div class="shots">
+      <figure class="shot">
+        <a href="screenshots/packages.png?v=1" target="_blank" rel="noopener"><img src="screenshots/packages.png?v=1" alt="Packages screen with add-on cards and status badges" loading="lazy"></a>
+        <figcaption><strong>Packages.</strong> Every detected add-on as a card with status, GitHub, and override badges — and per-card actions.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="screenshots/releases.png?v=1" target="_blank" rel="noopener"><img src="screenshots/releases.png?v=1" alt="Releases screen mapping add-ons to GitHub repos" loading="lazy"></a>
+        <figcaption><strong>Releases.</strong> Map add-ons to GitHub repos and see latest release, trust state, and last-checked age at a glance.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="screenshots/install-confirm.png?v=1" target="_blank" rel="noopener"><img src="screenshots/install-confirm.png?v=1" alt="Held-upload confirm screen with compatibility scan verdict" loading="lazy"></a>
+        <figcaption><strong>Informed force.</strong> An incompatible upload is held, scanned, and shown with a verdict before you decide to force it — no re-uploading.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="screenshots/audit-log.png?v=1" target="_blank" rel="noopener"><img src="screenshots/audit-log.png?v=1" alt="Audit Log screen with event table and counts" loading="lazy"></a>
+        <figcaption><strong>Audit log.</strong> Every install, block, trust pin, and override — with per-type counts and a self-update flag.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="screenshots/install-zip.png?v=1" target="_blank" rel="noopener"><img src="screenshots/install-zip.png?v=1" alt="Install ZIP screen with environment status cards" loading="lazy"></a>
+        <figcaption><strong>Install ZIP.</strong> Environment status cards, the file picker, and overwrite / override options.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="screenshots/settings.png?v=1" target="_blank" rel="noopener"><img src="screenshots/settings.png?v=1" alt="Settings screen with custom-menu and automation toggles" loading="lazy"></a>
+        <figcaption><strong>Settings.</strong> Custom-menu label + pending-update count, auto-finalize, and lazy-refresh toggles.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Built to be trusted</h2>
+    <div class="facts">
+      <div class="fact"><span class="v">EE 7</span><span class="l">supported</span></div>
+      <div class="fact"><span class="v">MIT</span><span class="l">open source</span></div>
+      <div class="fact"><span class="v">TOFU</span><span class="l">repo identity pinned</span></div>
+      <div class="fact"><span class="v">Free</span><span class="l">all releases</span></div>
+    </div>
+    <p style="margin-top:22px;color:var(--muted);font-size:14.5px;">Every install path — manual ZIP and one-click GitHub — runs the same inspect → compatibility-check → extract → verify → finalize pipeline, with a full audit trail. The riskiest pieces (the zip-layout detector, the trust comparison) ship with their own test suites.</p>
+  </div>
+</section>
+
+<section id="get" class="section">
+  <div class="container">
+    <h2>Free &amp; open source</h2>
+    <div class="price-card">
+      <span class="amount">Free</span>
+      <div class="terms">MIT licensed · all releases free · full source on GitHub</div>
+      <ul>
+        <li>Install from the ExpressionEngine add-on store or straight from GitHub</li>
+        <li>Every release is free — no license keys, no seats, no per-site limits</li>
+        <li>Full source is public; fork it, read it, send a pull request</li>
+        <li>Support via GitHub issues, or email best-effort</li>
+      </ul>
+      <a class="cta" href="https://github.com/calimonk/ee-addon-expert/releases/latest">Get the latest release</a>
+      <p style="margin-top:14px;color:var(--muted);font-size:13px;">Questions? <a href="mailto:calimonk@codebit.nl?subject=Addon%20Expert%20question">Email me</a> or <a href="https://github.com/calimonk/ee-addon-expert/issues">open an issue</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Need to know</h2>
+    <div class="grid-2">
+      <div class="feature">
+        <h3>Requirements</h3>
+        <p>ExpressionEngine 7, with the PHP <code>ZipArchive</code> extension (for uploads) and <code>cURL</code> (for GitHub downloads). GitHub API calls are unauthenticated — public repos only.</p>
+      </div>
+      <div class="feature">
+        <h3>A fork, with credit</h3>
+        <p>Addon Expert builds on <a href="https://github.com/jfaza/addon-manager-plus" target="_blank" rel="noopener">Addon Manager +</a> by Javid Fazaeli (MIT) — his ZIP installer is the foundation. The GitHub tracking, one-click updates, supply-chain checks, and compatibility tooling are added and maintained by Codebit.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <span>© <span id="year">2026</span> Codebit by Nivoli</span>
+    <span>
+      <a href="/addon-expert/docs">Docs</a>
+      &nbsp;·&nbsp;
+      <a href="/addon-expert/support">Support</a>
+      &nbsp;·&nbsp;
+      <a href="/addon-expert/changelog">Changelog</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/calimonk/ee-addon-expert">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="mailto:calimonk@codebit.nl">calimonk@codebit.nl</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
