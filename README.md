@@ -171,21 +171,49 @@ Loose add-on files at the ZIP root are rejected because the installer cannot inf
 
 ## Screenshots
 
-> **Note:** screenshots are being refreshed for the Addon Expert rename
-> and the 2.x screens. The image below predates the rename (it shows the
-> old product name) and is kept only as a layout reference until new
-> captures land in `docs/screenshots/`.
+### Packages
 
-| Screen | Image | What it shows |
-|--------|-------|---------------|
-| Install ZIP | `docs/screenshots/install-zip.png` | Status cards (ZIP support, add-ons folder, size limit), file picker, overwrite + override options |
-| Install ZIP — confirm | `docs/screenshots/install-confirm.png` | The held-upload confirm screen: unmet requirement, scan verdict, Force / Cancel |
-| Packages | `docs/screenshots/packages.png` | Package cards with status / GitHub / override badges and per-card actions |
-| Releases | `docs/screenshots/releases.png` | Repo mappings, latest release, trust column, install actions |
-| Audit Log | `docs/screenshots/audit-log.png` | Event table with per-type counts |
-| Settings | `docs/screenshots/settings.png` | Custom-menu, auto-finalize, lazy-refresh toggles |
+![Packages screen](docs/screenshots/packages.png)
 
-![Install ZIP (pre-rename, layout reference)](docs/screenshots/upload-zip.png)
+Every detected add-on as a card with status badges (Installed / Not
+Installed) and per-card actions. Addon Expert tracks itself here too.
+
+### Releases
+
+![Releases screen](docs/screenshots/releases.png)
+
+Map each add-on to a GitHub repo, see the latest release, trust state,
+and last-checked age. Author-declared mappings (like Addon Expert's own
+`calimonk/ee-addon-expert`) are filled in automatically and shown
+read-only.
+
+### Install ZIP
+
+![Install ZIP screen](docs/screenshots/install-zip.png)
+
+Drag-free upload with environment status cards, plus the overwrite and
+override-version-requirements options.
+
+### Install ZIP — confirm
+
+![Held-upload confirm screen](docs/screenshots/install-confirm.png)
+
+When a package declares a newer PHP/EE than the server runs, the upload
+is held and you get the unmet requirement, the inline compatibility-scan
+verdict, and a one-click Force / Cancel — no re-uploading.
+
+### Audit Log
+
+![Audit Log screen](docs/screenshots/audit-log.png)
+
+Append-only event trail with per-type counts and a self-update flag.
+
+### Settings
+
+![Settings screen](docs/screenshots/settings.png)
+
+Custom-menu integration (label + pending-update count), auto-finalize,
+and lazy-refresh toggles.
 
 ## Tracking GitHub Releases
 

@@ -53,7 +53,7 @@ $fmtAge = function (int $ts): string {
         Check for updates
       </button>
       <span class="addi-muted" style="margin-left:12px;font-size:12.5px">
-        Polls every mapped repo once. Cached for 12h afterwards.
+        Polls every mapped repo once. Cached for 1h; stale entries also refresh when this screen loads.
       </span>
     </form>
 
