@@ -2,7 +2,7 @@
 
 **Install, update, and track ExpressionEngine add-ons from the EE 7 control panel — ZIP uploads, GitHub releases, one-click updates, and supply-chain checks.**
 
-Maintainer: Codebit · License: MIT · Version: 2.0.0
+Maintainer: Codebit · License: MIT · Version: 2.1.0
 
 > **Addon Expert is a fork of [Addon Manager +](https://github.com/jfaza/addon-manager-plus)
 > by Javid Fazaeli** (MIT), extended with GitHub release tracking, one-click
@@ -28,15 +28,32 @@ Addon Expert keeps more of this workflow inside the control panel: upload the ZI
 
 ## Features
 
+**Install from ZIP** (the original Addon Manager + foundation)
 - Upload third-party add-on ZIP packages directly from the control panel.
 - Detect the real add-on folder automatically by locating `addon.setup.php`, including inside a wrapper folder.
-- Extract packages into the active add-ons directory.
-- Display installed / not installed / update available status for each package.
-- Link back into ExpressionEngine's native install, update, settings, and uninstall flow.
-- Reject unsafe ZIP paths, including absolute paths and `..` path traversal.
+- Extract packages into the active add-ons directory; reject unsafe ZIP paths (absolute paths, `..` traversal).
 - Generate package downloads on demand without permanently storing ZIP files.
-- Sort not-installed add-ons before installed ones for quick access.
-- Show the Settings action only for add-ons that declare a settings page.
+- Link back into ExpressionEngine's native install / update / settings / uninstall flow.
+
+**Track GitHub releases**
+- Map any installed add-on to a GitHub repo — author-declared (`'github_repo'` in `addon.setup.php`) or admin-mapped on the Releases screen.
+- Poll `/releases/latest`, compare to the on-disk version, and surface a `GitHub: vX.Y.Z ↗` badge plus a sidebar count of pending updates.
+- 1-hour cache with lazy parallel refresh on the Releases screen; an explicit "Check for updates" button forces a full refresh.
+
+**One-click update + auto-finalize**
+- Download → safe-extract → atomic swap → opcache-invalidate, with a rolling backup kept outside the add-ons directory.
+- Auto-finalize the EE-side version bump (runs the add-on's `upd.php` + updates `exp_modules` / `exp_extensions`) so you don't have to click through Developer → Add-Ons. Covers both GitHub installs and manual ZIP uploads.
+
+**Supply-chain protection**
+- Trust-on-first-use: pins the GitHub repo's stable numeric identifiers and hard-blocks an install if they change (RepoJacking / ownership transfer), with a "Reconfirm trust" path for legitimate changes.
+- Append-only JSONL audit log of every install / trust / override event, on its own Audit Log screen.
+
+**Compatibility & overrides**
+- Pre-flight `requires` check (PHP / EE version) before extraction — surfaces the same verdict EE would give, earlier.
+- Optional force-override for an over-declared requirement, gated by a heuristic feature scan ("no PHP 8.3 features detected — appears safe to force" vs "uses `json_validate()` — will fatal"), with a persistent override badge.
+
+**CP integration**
+- Optional Custom-menu entry with a configurable label and a pending-update count.
 
 ## Requirements
 
@@ -54,29 +71,66 @@ Addon Expert keeps more of this workflow inside the control panel: upload the ZI
 
 ## Usage
 
-### Uploading a package
+Addon Expert adds five screens under **Developer → Add-Ons → Addon Expert**:
+**Install ZIP**, **Packages**, **Releases**, **Audit Log**, and **Settings**.
 
-1. Go to **Addon Expert > Install ZIP**.
-2. Select a ZIP file and upload it.
-3. On success, click **Install** in the notice, or find the add-on on the Packages screen.
+### Install ZIP
 
-### Packages screen
+1. Go to **Addon Expert → Install ZIP** and pick a `.zip` package.
+2. On upload, the package is **inspected and scanned before anything is
+   committed**:
+   - **Compatible** → extracted and installed straight through, and the
+     EE-side version is auto-finalized on the next screen load.
+   - **Incompatible** (declares a newer PHP/EE than this server runs) →
+     the upload is **held** and you're shown a confirm screen with the
+     unmet requirement, an inline compatibility-scan verdict, and a
+     one-click **Force install anyway** (or **Cancel**). No re-uploading.
+3. Tick **Overwrite** to replace an existing add-on folder of the same
+   short name. Tick **Override version requirements** up front to force
+   an incompatible package immediately and skip the confirm step.
 
-The Packages screen shows all detected packages as responsive cards with status badges:
+### Packages
+
+All detected packages render as cards with status badges:
 
 | Badge | Meaning |
 |-------|---------|
-| Installed | The add-on is extracted and installed in ExpressionEngine. |
-| Not Installed | The add-on is extracted but not yet installed. |
-| Update Available | A newer version was uploaded over an existing installed add-on. |
+| Installed | Extracted and installed in ExpressionEngine. |
+| Not Installed | Extracted but not yet installed. |
+| Update Available | A newer version is on disk than EE has recorded. |
+| `GitHub: vX.Y.Z ↗` | A newer release exists on the mapped GitHub repo (links to it). |
+| ⚠ incompatible | The package's declared PHP/EE requirement isn't met on this server. |
+| ⚠ requirement override | This add-on was force-installed past its declared requirement (shows the original requirement + the scan verdict captured at force time). |
 
-Available actions per card:
+Per-card actions: **Install**, **Update** (EE-local), **Update from
+GitHub** (orange, when a newer release exists), **Settings** (when the
+add-on declares one), **Download**, **Uninstall**.
 
-- **Install** — available for not-installed add-ons.
-- **Update** — available when a newer version has been uploaded.
-- **Settings** — available only when the add-on declares a settings page.
-- **Download** — generates a ZIP for any detected add-on on demand.
-- **Uninstall** — (red) available for installed add-ons.
+### Releases
+
+Maps each installed add-on to a GitHub repo and tracks updates. Per row:
+installed version, mapped repo (read-only when author-declared, editable
+otherwise), latest release, last-checked age, trust state, and the
+install/reconfirm action. **Check for updates** forces a full refresh;
+otherwise stale entries refresh lazily (and in parallel) when the screen
+loads.
+
+### Audit Log
+
+An append-only JSONL trail of every install, failure, block, trust pin,
+override, and auto-finalize — with per-event-type counts, a "self?"
+column flagging self-updates, and grep recipes for the raw file at
+`system/user/cache/addon_expert/install.log`.
+
+### Settings
+
+- **Custom-menu integration** — show Addon Expert in the CP Custom menu,
+  with a configurable label (default "Addons") and an optional pending-
+  update count (`Addons (3)`). The admin still adds the entry once via
+  **Settings → Menu Manager**.
+- **Auto-finalize** the EE-side update after an install (default on).
+- **Lazy refresh** stale release caches when the Releases screen loads
+  (default on).
 
 ## Package Format
 
@@ -117,19 +171,21 @@ Loose add-on files at the ZIP root are rejected because the installer cannot inf
 
 ## Screenshots
 
-### Install ZIP
+> **Note:** screenshots are being refreshed for the Addon Expert rename
+> and the 2.x screens. The image below predates the rename (it shows the
+> old product name) and is kept only as a layout reference until new
+> captures land in `docs/screenshots/`.
 
-![Install ZIP screen](docs/screenshots/upload-zip.png)
+| Screen | Image | What it shows |
+|--------|-------|---------------|
+| Install ZIP | `docs/screenshots/install-zip.png` | Status cards (ZIP support, add-ons folder, size limit), file picker, overwrite + override options |
+| Install ZIP — confirm | `docs/screenshots/install-confirm.png` | The held-upload confirm screen: unmet requirement, scan verdict, Force / Cancel |
+| Packages | `docs/screenshots/packages.png` | Package cards with status / GitHub / override badges and per-card actions |
+| Releases | `docs/screenshots/releases.png` | Repo mappings, latest release, trust column, install actions |
+| Audit Log | `docs/screenshots/audit-log.png` | Event table with per-type counts |
+| Settings | `docs/screenshots/settings.png` | Custom-menu, auto-finalize, lazy-refresh toggles |
 
-*Upload screen showing ZIP Support, Add-ons Folder, and Maximum ZIP Size status cards, the file picker, and the overwrite option.*
-
-### Packages
-
-> Coming soon: package cards screen.
-
-### Actions
-
-> Coming soon: update / install / settings actions.
+![Install ZIP (pre-rename, layout reference)](docs/screenshots/upload-zip.png)
 
 ## Tracking GitHub Releases
 
@@ -147,8 +203,9 @@ Two resolution layers, in priority order:
 
 The Releases screen lists every installed add-on with its installed version,
 mapped repo, latest release, and last-check timestamp. Click **Check for
-updates** to refresh all mapped repos (12h cache, sentinel-on-failure so a
-flaky network doesn't hammer GitHub). The Packages screen swaps in a
+updates** to refresh all mapped repos (1-hour cache, sentinel-on-failure so a
+flaky network doesn't hammer GitHub; stale entries also refresh lazily and in
+parallel when the screen loads). The Packages screen swaps in a
 "GitHub: vX.Y.Z ↗" badge whenever a newer release exists.
 
 ### One-click update from GitHub
@@ -209,8 +266,8 @@ pins a **trust anchor** on first use.
   `⚠ CHANGED`, `unverified`) and offers a **Reconfirm trust** action for
   legitimate identity changes. Reconfirming is itself audit-logged.
 - Every install and trust event writes to
-  `system/user/cache/addon_expert/install.log` (JSONL, last 25 events
-  shown on the Releases screen). Useful for forensics after the fact.
+  `system/user/cache/addon_expert/install.log` (JSONL), surfaced on the
+  dedicated **Audit Log** screen. Useful for forensics after the fact.
 
 The same rules apply to Addon Expert's own self-update — a hostile
 takeover of our own repo would otherwise become a vector via the one-click
@@ -246,16 +303,6 @@ for f in *.php ControlPanel/*.php ControlPanel/Routes/*.php Service/*.php views/
 ```
 
 `AGENTS.md` is local development guidance and is intentionally not part of this repository's public documentation.
-
-## GitHub Repository Setup
-
-> Remove this section after completing repo setup.
-
-Set the GitHub **description** to:
-
-> Install and manage ExpressionEngine add-on ZIP packages directly from the EE 7 control panel.
-
-Add these **topics:** `expressionengine` `expressionengine-addon` `ee7` `cms` `php` `addon-manager` `zip-installer` `control-panel` `developer-tools`
 
 ## License
 
