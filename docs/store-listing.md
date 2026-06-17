@@ -4,8 +4,9 @@ Paste-ready copy for the EE vendor submission form, mirroring the field
 layout (Essentials / Add-on Versions / Add-on Icon / Version
 Compatibility / Software License / Supporting Assets).
 
-> Two fields need a decision before submitting — see **Decisions** at the
-> bottom. Everything else is final.
+> **Status:** copy is final. Listed as **Free / MIT**. URLs use branded
+> `codebit.nl/addon-expert/*` pages — those pages must exist before the
+> listing links resolve (see **Before submitting** at the bottom).
 
 ---
 
@@ -17,7 +18,12 @@ Compatibility / Software License / Supporting Assets).
 Addon Expert
 ```
 
-**Add-on Price** — see Decisions (recommended: Free / 0.00)
+**Add-on Price**
+
+```
+0.00
+```
+(Free — Addon Expert is MIT and developed in the open.)
 
 **Elevator Pitch**
 
@@ -87,22 +93,22 @@ rsvg-convert -w 512 -h 512 icon.svg -o addon-expert-icon.png
 
 ## Software License
 
-- **License:** MIT / Open Source  *(differs from a commercial add-on — see Decisions)*
+- **License:** MIT / Open Source
 - **Link:** https://github.com/calimonk/ee-addon-expert/blob/main/LICENSE
 
 ---
 
 ## Supporting Assets
 
-Recommended default = GitHub URLs (they exist today and are accurate). Swap
-to `codebit.nl/addon-expert/*` pages if/when you create them — see Decisions.
+Branded `codebit.nl/addon-expert/*` pages, matching the CF Image listing
+style. **These pages must exist before submitting** (see Before submitting).
 
-| Field | Value (GitHub default) |
-|-------|------------------------|
-| Add-on Main URL | https://github.com/calimonk/ee-addon-expert |
-| Documentation URL | https://github.com/calimonk/ee-addon-expert#readme |
-| Support URL | https://github.com/calimonk/ee-addon-expert/issues |
-| Changelog URL | https://github.com/calimonk/ee-addon-expert/blob/main/CHANGELOG.md |
+| Field | Value |
+|-------|-------|
+| Add-on Main URL | https://codebit.nl/addon-expert |
+| Documentation URL | https://codebit.nl/addon-expert/docs |
+| Support URL | https://codebit.nl/addon-expert/support |
+| Changelog URL | https://codebit.nl/addon-expert/changelog |
 | Featured Image | `docs/screenshots/packages.png` (or `releases.png`) |
 
 ---
@@ -123,13 +129,22 @@ README/LICENSE/CHANGELOG only, no docs/screenshots.
 
 ---
 
-## Decisions needed before submitting
+## Before submitting
 
-1. **Price / license model.** Addon Expert is MIT and its full source is
-   public on GitHub, so a paid listing is hard to justify (buyers can get
-   it free). Recommended: **list as Free**, License = MIT. If you want it
-   commercial anyway (e.g. selling convenience/support), that's a business
-   call — but expect questions given the open source.
-2. **Listing URLs.** GitHub URLs (above) are accurate today. If you'd
-   rather present branded `codebit.nl/addon-expert/*` pages like the CF
-   Image listing, those pages need to be created first.
+The only thing gating submission is the four `codebit.nl/addon-expert/*`
+pages — the store links to them and reviewers will click through:
+
+- `/addon-expert` — overview / landing (mirror the elevator pitch + Full
+  Description above; the CF Image landing page is the template).
+- `/addon-expert/docs` — can simply restate the in-CP Documentation
+  screen, or link to the GitHub README/wiki.
+- `/addon-expert/support` — how to get help (GitHub issues link is fine,
+  or a contact form like CF Image's).
+- `/addon-expert/changelog` — mirror `CHANGELOG.md`.
+
+Quickest honest shortcut if you want to submit now: point Docs →
+GitHub README, Support → GitHub issues, Changelog → GitHub CHANGELOG, and
+only build the `/addon-expert` landing page. They're branded-ish via a
+redirect and all resolve immediately.
+
+Everything else (copy, icon, version, license, zip) is ready.
