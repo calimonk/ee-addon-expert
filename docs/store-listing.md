@@ -78,13 +78,15 @@ touches your site.
 
 ## Add-on Icon
 
-`icon.svg` (repo root) is the Addon Expert icon — dark→teal rounded square,
-matching the Codebit family (CF Image, etc.). Export to PNG for the store
-(512×512 recommended):
+The Addon Expert mark — near-black squircle, three teal stacked "add-on"
+bars with an update badge, in the Codebit family style. Source is
+`icon.svg` (repo root).
+
+**Ready to upload:** `~/Downloads/addon-expert-icon-512.png` (512×512,
+transparent corners). Re-render any time with Quick Look:
 
 ```bash
-# with rsvg-convert (librsvg) or Inkscape, e.g.:
-rsvg-convert -w 512 -h 512 icon.svg -o addon-expert-icon.png
+qlmanage -t -s 512 -o ~/Downloads icon.svg && mv ~/Downloads/icon.svg.png ~/Downloads/addon-expert-icon-512.png
 ```
 
 ## Version Compatibility
