@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-06-17
+
+### Changed (docs / copy only — no logic change)
+- Rewrote the in-CP **Documentation** screen to cover the full 2.x
+  feature set (was still describing only the ZIP uploader): Install ZIP +
+  inspect/confirm, Packages badges, GitHub tracking, one-click update +
+  auto-finalize, supply-chain/TOFU + audit log, compatibility + force
+  override + feature scan, Settings + custom menu, a "where data lives"
+  map, and refreshed safety checks. Its toolbar now links to every
+  screen.
+- Fixed the **Releases** "Check for updates" helper text — it still said
+  "Cached for 12h afterwards"; the TTL has been 1h (with lazy refresh)
+  since 1.4.0.
+- README: refreshed to the 2.x feature set and embedded current
+  screenshots.
+
 ## [2.1.0] - 2026-06-17
 
 ### Changed — Cleaner upload flow (inspect-before-commit + one-click force)
