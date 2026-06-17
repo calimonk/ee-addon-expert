@@ -63,15 +63,15 @@ touches your site.
 
 | Field | Value |
 |-------|-------|
-| Version | `2.1.1` |
+| Version | `2.1.2` |
 | Release Date | 2026-06-17 |
-| Add-on Zip | `addon_expert-v2.1.1.zip` (see Build below) |
+| Add-on Zip | `addon_expert-v2.1.2.zip` (see Build below) |
 | Changelog | use the text block below |
 
 **Changelog cell text**
 
 ```
-2.1.1 — Documentation and in-CP help refreshed for the full feature set; fixed a stale cache-interval label on the Releases screen. (2.1.0 added the inspect-before-commit upload flow with one-click force; 2.0.0 was the rename from Addon Manager + with automatic config migration.) See the full history at the Changelog URL.
+2.1.2 — Documentation and in-CP help refreshed for the full feature set; fixed a stale cache-interval label on the Releases screen. (2.1.0 added the inspect-before-commit upload flow with one-click force; 2.0.0 was the rename from Addon Manager + with automatic config migration.) See the full history at the Changelog URL.
 ```
 
 ---
@@ -118,12 +118,12 @@ style. **These pages must exist before submitting** (see Before submitting).
 ## Build the submission zip
 
 The GitHub release already hosts an identical package
-(`addon_expert-2.1.1.zip`). To produce a `v`-named file matching the store
+(`addon_expert-2.1.2.zip`). To produce a `v`-named file matching the store
 convention:
 
 ```bash
 git archive --format=zip --prefix=addon_expert/ \
-  -o addon_expert-v2.1.1.zip v2.1.1
+  -o addon_expert-v2.1.2.zip v2.1.2
 ```
 
 `.gitattributes` keeps the package lean (~105 KB) — runtime code +
