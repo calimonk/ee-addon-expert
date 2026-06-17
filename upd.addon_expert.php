@@ -120,7 +120,7 @@ class Addon_expert_upd extends Installer
         if ($existing > 0) {
             ee()->db
                 ->where('class', 'Addon_expert_ext')
-                ->update('extensions', ['version' => '2.0.0']);
+                ->update('extensions', ['version' => '2.1.0']);
             return;
         }
 
@@ -130,7 +130,7 @@ class Addon_expert_upd extends Installer
             'hook'     => 'cp_custom_menu',
             'settings' => '',
             'priority' => 10,
-            'version'  => '2.0.0',
+            'version'  => '2.1.0',
             'enabled'  => 'y',
         ]);
     }

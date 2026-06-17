@@ -25,7 +25,7 @@ use Codebit\AddonExpert\Service\SettingsStore;
 class Addon_expert_ext
 {
     public $name        = 'Addon Expert';
-    public $version     = '2.0.0';
+    public $version     = '2.1.0';
     public $description = 'Custom-menu integration for Addon Expert';
     public $docs_url    = 'https://github.com/calimonk/ee-addon-manager';
     public $settings_exist = 'n'; // Settings live in our own Settings screen.

@@ -406,6 +406,147 @@ class PackageInstaller
         return $count;
     }
 
+    /**
+     * Validate an upload and inspect+scan it WITHOUT committing anything.
+     * Returns the metadata, compatibility issues, and (when incompatible)
+     * the feature-scan verdict, plus the tmp path so the caller can
+     * either install it immediately or quarantine it for confirmation.
+     */
+    public function inspectUpload(array $file): array
+    {
+        $this->assertReady();
+
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new RuntimeException($this->uploadErrorMessage((int) ($file['error'] ?? UPLOAD_ERR_NO_FILE)));
+        }
+        $tmpName = $file['tmp_name'] ?? '';
+        $originalName = $file['name'] ?? 'package.zip';
+        if (! is_uploaded_file($tmpName) && ! is_file($tmpName)) {
+            throw new RuntimeException('The uploaded package could not be read.');
+        }
+        if (strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) !== 'zip') {
+            throw new RuntimeException('Upload a .zip package.');
+        }
+
+        $inspect = $this->inspectForInstall($tmpName);
+        $inspect['tmp_name'] = $tmpName;
+        $inspect['original_name'] = $originalName;
+        return $inspect;
+    }
+
+    /**
+     * Inspect + compat-check + (if incompatible) feature-scan a zip on
+     * disk, no side effects.
+     *
+     * @return array{short_name:string,name:string,version:string,requires:array,issues:string[],scan:?array}
+     */
+    public function inspectForInstall(string $zipPath): array
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath) !== true) {
+            throw new RuntimeException('The ZIP package could not be opened.');
+        }
+        try {
+            $info = $this->inspectZip($zip);
+            $requires = (array) ($info['metadata']['requires'] ?? []);
+            $issues = self::checkRequirements($requires);
+            $scan = null;
+            if (! empty($issues)) {
+                try {
+                    $scan = $this->scanner()->scanFiles($this->collectZipPhp($zip, $info['root']), PHP_VERSION);
+                } catch (\Throwable $e) {
+                    // advisory only
+                }
+            }
+            return [
+                'short_name' => $info['short_name'],
+                'name'       => $info['metadata']['name'] ?? $info['short_name'],
+                'version'    => (string) ($info['metadata']['version'] ?? ''),
+                'requires'   => $requires,
+                'issues'     => $issues,
+                'scan'       => $scan,
+            ];
+        } finally {
+            $zip->close();
+        }
+    }
+
+    /* ---- quarantine (hold an incompatible upload for confirmation) ---- */
+
+    private function quarantineDir(): string
+    {
+        $base = defined('SYSPATH') ? SYSPATH . 'user/cache' : sys_get_temp_dir();
+        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+            . 'addon_expert' . DIRECTORY_SEPARATOR . 'quarantine';
+    }
+
+    /** Move an uploaded tmp file into quarantine + write its meta. Returns token. */
+    public function quarantineStore(string $tmpName, array $meta): string
+    {
+        $dir = $this->quarantineDir();
+        if (! is_dir($dir) && ! @mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            throw new RuntimeException('Could not create the quarantine directory.');
+        }
+        $token = bin2hex(random_bytes(8));
+        $zipDest = $dir . DIRECTORY_SEPARATOR . $token . '.zip';
+
+        $moved = is_uploaded_file($tmpName)
+            ? @move_uploaded_file($tmpName, $zipDest)
+            : @copy($tmpName, $zipDest);
+        if (! $moved) {
+            throw new RuntimeException('Could not quarantine the uploaded package.');
+        }
+
+        $meta['token'] = $token;
+        $meta['created_at'] = time();
+        @file_put_contents($dir . DIRECTORY_SEPARATOR . $token . '.json', json_encode($meta, JSON_UNESCAPED_SLASHES));
+        return $token;
+    }
+
+    /** Load a quarantined package's meta + zip path, or null if absent/invalid. */
+    public function quarantineGet(string $token): ?array
+    {
+        if (! preg_match('/^[a-f0-9]{16}$/', $token)) {
+            return null;
+        }
+        $metaFile = $this->quarantineDir() . DIRECTORY_SEPARATOR . $token . '.json';
+        $zipFile  = $this->quarantineDir() . DIRECTORY_SEPARATOR . $token . '.zip';
+        if (! is_file($metaFile) || ! is_file($zipFile)) {
+            return null;
+        }
+        $meta = json_decode((string) @file_get_contents($metaFile), true);
+        if (! is_array($meta)) {
+            return null;
+        }
+        $meta['zip_path'] = $zipFile;
+        return $meta;
+    }
+
+    public function quarantineClear(string $token): void
+    {
+        if (! preg_match('/^[a-f0-9]{16}$/', $token)) {
+            return;
+        }
+        foreach (['.zip', '.json'] as $ext) {
+            $f = $this->quarantineDir() . DIRECTORY_SEPARATOR . $token . $ext;
+            if (is_file($f)) {
+                @unlink($f);
+            }
+        }
+    }
+
+    /** Drop quarantined packages older than $maxAge seconds (default 1h). */
+    public function sweepQuarantine(int $maxAge = 3600): void
+    {
+        foreach (glob($this->quarantineDir() . DIRECTORY_SEPARATOR . '*.json') ?: [] as $metaFile) {
+            $meta = json_decode((string) @file_get_contents($metaFile), true);
+            $created = is_array($meta) ? (int) ($meta['created_at'] ?? 0) : 0;
+            if ($created === 0 || (time() - $created) > $maxAge) {
+                $this->quarantineClear(basename($metaFile, '.json'));
+            }
+        }
+    }
+
     public function installUploaded(array $file, bool $overwrite = false, bool $overrideRequirements = false, ?string $overrideReason = null): array
     {
         $this->assertReady();
@@ -425,8 +566,21 @@ class PackageInstaller
             throw new RuntimeException('Upload a .zip package.');
         }
 
+        return $this->installFromZip($tmpName, $overwrite, $overrideRequirements, $overrideReason);
+    }
+
+    /**
+     * Install from a zip already on disk — an uploaded tmp file or a
+     * quarantined package awaiting force-confirmation. Shared by
+     * installUploaded() and the quarantine confirm flow so both run
+     * identical inspect → compat → extract → override → finalize logic.
+     */
+    public function installFromZip(string $zipPath, bool $overwrite = false, bool $overrideRequirements = false, ?string $overrideReason = null): array
+    {
+        $this->assertReady();
+
         $zip = new ZipArchive();
-        if ($zip->open($tmpName) !== true) {
+        if ($zip->open($zipPath) !== true) {
             throw new RuntimeException('The ZIP package could not be opened.');
         }
 

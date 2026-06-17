@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-06-17
+
+### Changed — Cleaner upload flow (inspect-before-commit + one-click force)
+- Uploading a ZIP now **inspects and scans before committing**. A
+  compatible package installs straight through as before. An
+  **incompatible** one is no longer rejected with an error that loses
+  your file — instead the upload is **quarantined** and you land on a
+  confirm screen showing the unmet requirement, the compatibility-scan
+  verdict inline, and a one-click **Force install anyway** button (with
+  an optional audit-logged reason). No re-selecting and re-uploading
+  the file.
+- The pre-existing "Override version requirements" checkbox still works
+  as a one-shot power path: tick it on the initial upload and an
+  incompatible package force-installs immediately, skipping the confirm
+  step.
+- Quarantined uploads live in `system/user/cache/addon_expert/quarantine/`,
+  are swept after 1 hour, and tokens are random 16-hex (path-safe).
+
+### Internal
+- `PackageInstaller`: `inspectUpload()` / `inspectForInstall()`
+  (validate + inspect + scan, no side effects), `installFromZip()`
+  (path-based installer shared by the upload and confirm paths), and
+  `quarantineStore()` / `quarantineGet()` / `quarantineClear()` /
+  `sweepQuarantine()`. `installUploaded()` now delegates to
+  `installFromZip()`.
+- GitHub repo renamed `calimonk/ee-addon-manager` →
+  `calimonk/ee-addon-expert`; `github_repo` self-reference updated to
+  match (GitHub redirects the old URL).
+
 ## [2.0.0] - 2026-06-17 — Renamed to Addon Expert
 
 This is the same codebase as 1.7.0, **spun off into an independently
