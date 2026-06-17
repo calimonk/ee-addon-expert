@@ -85,7 +85,7 @@ $eventBadge = function (string $event) {
               <td style="padding:6px 10px;white-space:nowrap"><?= $h((string) ($event['admin'] ?? '—')) ?></td>
               <td style="padding:6px 10px;text-align:center;white-space:nowrap">
                 <?php if ($isSelf): ?>
-                  <span title="Self-update of Addon Manager + itself" style="color:#0ea5e9;font-weight:700">●</span>
+                  <span title="Self-update of Addon Expert itself" style="color:#0ea5e9;font-weight:700">●</span>
                 <?php else: ?>
                   <span style="color:#cbd5e1">—</span>
                 <?php endif; ?>

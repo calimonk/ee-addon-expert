@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\ControlPanel\Routes;
+namespace Codebit\AddonExpert\ControlPanel\Routes;
 
 trait LoadsStyle
 {

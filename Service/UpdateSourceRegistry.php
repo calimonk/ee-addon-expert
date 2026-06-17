@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 /**
  * Resolves where to look for newer versions of each installed add-on.
@@ -46,7 +46,7 @@ class UpdateSourceRegistry
 
         return rtrim($base, DIRECTORY_SEPARATOR)
             . DIRECTORY_SEPARATOR
-            . 'addon_installer_mappings.json';
+            . 'addon_expert_mappings.json';
     }
 
     /**

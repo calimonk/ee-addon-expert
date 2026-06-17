@@ -1,6 +1,6 @@
 # Security Model
 
-Addon Manager + does not execute uploaded package PHP during inspection.
+Addon Expert does not execute uploaded package PHP during inspection.
 
 ## ZIP Validation
 
@@ -21,7 +21,7 @@ outside the add-on folder are ignored.
 ## Lifecycle Actions
 
 Install, update, settings, and uninstall are delegated to ExpressionEngine.
-Addon Manager + builds convenience actions, but ExpressionEngine enforces
+Addon Expert builds convenience actions, but ExpressionEngine enforces
 permissions, CSRF validation, and lifecycle behavior.
 
 ## Downloads

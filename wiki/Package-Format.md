@@ -1,6 +1,6 @@
 # Package Format
 
-Addon Manager + expects a ZIP file containing one ExpressionEngine add-on folder.
+Addon Expert expects a ZIP file containing one ExpressionEngine add-on folder.
 
 ## Standard Layout
 

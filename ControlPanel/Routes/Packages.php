@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\ControlPanel\Routes;
+namespace Codebit\AddonExpert\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
 
@@ -24,11 +24,11 @@ class Packages extends AbstractRoute
      */
     public function process($id = false)
     {
-        $this->addBreadcrumb('index', 'Addon Manager +');
+        $this->addBreadcrumb('index', 'Addon Expert');
         $this->addBreadcrumb('packages', 'Packages');
         $this->loadStyle();
 
-        $installer = ee('addon_installer:packageInstaller');
+        $installer = ee('addon_expert:packageInstaller');
         $download = (string) ee()->input->get('download', true);
 
         if ($download !== '') {
@@ -40,9 +40,9 @@ class Packages extends AbstractRoute
         // install and skip the route the redirect actually targeted.
         $finalizeResults = null;
         try {
-            $settings = ee('addon_installer:settingsStore');
+            $settings = ee('addon_expert:settingsStore');
             if ($settings->get('auto_finalize') === 'y') {
-                $finalizer = ee('addon_installer:autoFinalizer');
+                $finalizer = ee('addon_expert:autoFinalizer');
                 if (! empty($finalizer->pending())) {
                     $finalizeResults = $finalizer->finalizeAllPending();
                 }
@@ -53,8 +53,8 @@ class Packages extends AbstractRoute
 
         $this->setBody('Packages', [
             'packages' => $installer->installedPackages(),
-            'upload_url' => ee('CP/URL')->make('addons/settings/addon_installer/index')->compile(),
-            'docs_url' => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
+            'upload_url' => ee('CP/URL')->make('addons/settings/addon_expert/index')->compile(),
+            'docs_url' => ee('CP/URL')->make('addons/settings/addon_expert/documentation')->compile(),
             'manager_url' => ee('CP/URL')->make('addons')->compile(),
             'csrf_token' => $installer->csrfToken(),
             'finalize_results' => $finalizeResults,

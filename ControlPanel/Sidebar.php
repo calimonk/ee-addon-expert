@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\ControlPanel;
+namespace Codebit\AddonExpert\ControlPanel;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractSidebar;
 
@@ -8,9 +8,9 @@ class Sidebar extends AbstractSidebar
 {
     public $automatic = false;
 
-    public $header = 'Addon Manager +';
+    public $header = 'Addon Expert';
 
-    private string $base = 'addons/settings/addon_installer/';
+    private string $base = 'addons/settings/addon_expert/';
 
     public function process()
     {
@@ -67,7 +67,7 @@ class Sidebar extends AbstractSidebar
     private function remoteUpdateCount(): int
     {
         try {
-            return (int) ee('addon_installer:packageInstaller')->remoteUpdateCount();
+            return (int) ee('addon_expert:packageInstaller')->remoteUpdateCount();
         } catch (\Throwable $e) {
             return 0;
         }

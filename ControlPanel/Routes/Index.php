@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\ControlPanel\Routes;
+namespace Codebit\AddonExpert\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
 
@@ -16,7 +16,7 @@ class Index extends AbstractRoute
     /**
      * @var string
      */
-    protected $cp_page_title = 'Addon Manager +';
+    protected $cp_page_title = 'Addon Expert';
 
     /**
      * @param false $id
@@ -24,10 +24,10 @@ class Index extends AbstractRoute
      */
     public function process($id = false)
     {
-        $this->addBreadcrumb('index', 'Addon Manager +');
+        $this->addBreadcrumb('index', 'Addon Expert');
         $this->loadStyle();
 
-        $installer = ee('addon_installer:packageInstaller');
+        $installer = ee('addon_expert:packageInstaller');
         $result = null;
 
         if (ee('Request')->isPost() && ee()->input->post('install_package')) {
@@ -50,7 +50,7 @@ class Index extends AbstractRoute
                     ->addToBody($uploadBody)
                     ->defer();
 
-                ee()->functions->redirect(ee('CP/URL')->make('addons/settings/addon_installer/index', [
+                ee()->functions->redirect(ee('CP/URL')->make('addons/settings/addon_expert/index', [
                     'installed' => $result['short_name'],
                 ]));
             } catch (\Throwable $e) {
@@ -60,7 +60,7 @@ class Index extends AbstractRoute
                     ->addToBody($e->getMessage())
                     ->defer();
 
-                ee()->functions->redirect(ee('CP/URL')->make('addons/settings/addon_installer/index'));
+                ee()->functions->redirect(ee('CP/URL')->make('addons/settings/addon_expert/index'));
             }
         }
 
@@ -72,9 +72,9 @@ class Index extends AbstractRoute
         // on Developer → Add-Ons.
         $finalizeResults = null;
         try {
-            $settings = ee('addon_installer:settingsStore');
+            $settings = ee('addon_expert:settingsStore');
             if ($settings->get('auto_finalize') === 'y') {
-                $finalizer = ee('addon_installer:autoFinalizer');
+                $finalizer = ee('addon_expert:autoFinalizer');
                 if (! empty($finalizer->pending())) {
                     $finalizeResults = $finalizer->finalizeAllPending();
                 }
@@ -88,7 +88,7 @@ class Index extends AbstractRoute
         $isInstalled = $installedAddon ? (bool) $installedAddon->isInstalled() : false;
         $updateAvailable = $installedAddon ? (bool) $installedAddon->hasUpdate() : false;
         $settingsAvailable = $isInstalled && $installedAddon && (bool) $installedAddon->get('settings_exist');
-        $packagesUrl = ee('CP/URL')->make('addons/settings/addon_installer/packages');
+        $packagesUrl = ee('CP/URL')->make('addons/settings/addon_expert/packages');
 
         $this->setBody('Index', [
             'status' => $installer->status(),
@@ -116,7 +116,7 @@ class Index extends AbstractRoute
                 ? ee('CP/URL')->make('addons/settings/' . $installedShortName)->compile()
                 : '',
             'packages_url' => $packagesUrl->compile(),
-            'docs_url' => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
+            'docs_url' => ee('CP/URL')->make('addons/settings/addon_expert/documentation')->compile(),
             'csrf_token' => $installer->csrfToken(),
         ]);
 

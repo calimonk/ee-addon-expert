@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 /**
  * Persistent TOFU (Trust On First Use) anchor for GitHub repo mappings.
@@ -44,7 +44,7 @@ class TrustStore
         $base = defined('SYSPATH') ? SYSPATH . 'user/config' : sys_get_temp_dir();
         return rtrim($base, DIRECTORY_SEPARATOR)
             . DIRECTORY_SEPARATOR
-            . 'addon_installer_trust.json';
+            . 'addon_expert_trust.json';
     }
 
     /**

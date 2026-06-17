@@ -2,7 +2,7 @@
 
 ## Upload
 
-Use Install ZIP to upload an ExpressionEngine add-on package. Addon Manager +
+Use Install ZIP to upload an ExpressionEngine add-on package. Addon Expert
 extracts the detected add-on folder into the active add-ons directory.
 
 Enable overwrite when uploading a newer version of an add-on whose folder

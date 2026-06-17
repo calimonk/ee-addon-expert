@@ -1,23 +1,23 @@
 <?php
 
-use JavidFazaeli\AddonInstaller\Service\AutoFinalizer;
-use JavidFazaeli\AddonInstaller\Service\CompatibilityScanner;
-use JavidFazaeli\AddonInstaller\Service\GitHubReleaseChecker;
-use JavidFazaeli\AddonInstaller\Service\InstallAuditor;
-use JavidFazaeli\AddonInstaller\Service\OverrideStore;
-use JavidFazaeli\AddonInstaller\Service\PackageInstaller;
-use JavidFazaeli\AddonInstaller\Service\ReleaseInstaller;
-use JavidFazaeli\AddonInstaller\Service\SettingsStore;
-use JavidFazaeli\AddonInstaller\Service\TrustStore;
-use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
+use Codebit\AddonExpert\Service\AutoFinalizer;
+use Codebit\AddonExpert\Service\CompatibilityScanner;
+use Codebit\AddonExpert\Service\GitHubReleaseChecker;
+use Codebit\AddonExpert\Service\InstallAuditor;
+use Codebit\AddonExpert\Service\OverrideStore;
+use Codebit\AddonExpert\Service\PackageInstaller;
+use Codebit\AddonExpert\Service\ReleaseInstaller;
+use Codebit\AddonExpert\Service\SettingsStore;
+use Codebit\AddonExpert\Service\TrustStore;
+use Codebit\AddonExpert\Service\UpdateSourceRegistry;
 
 return [
-    'name'              => 'Addon Manager +',
-    'description'       => 'Manage ExpressionEngine add-ons from ZIP packages through the control panel.',
-    'version'           => '1.7.0',
-    'author'            => 'Javid Fazaeli',
-    'author_url'        => 'https://fazaeli.dev',
-    'namespace'         => 'JavidFazaeli\AddonInstaller',
+    'name'              => 'Addon Expert',
+    'description'       => 'Install, update, and track ExpressionEngine add-ons — ZIP uploads, GitHub releases, one-click updates, supply-chain checks. Based on Addon Manager + by Javid Fazaeli (MIT).',
+    'version'           => '2.0.0',
+    'author'            => 'Codebit',
+    'author_url'        => 'https://codebit.nl',
+    'namespace'         => 'Codebit\AddonExpert',
     'settings_exist'    => true,
     'github_repo'       => 'calimonk/ee-addon-manager',
     'services.singletons' => [
@@ -25,78 +25,78 @@ return [
             return new GitHubReleaseChecker();
         },
         'GitHubReleaseChecker' => function($addon) {
-            return ee('addon_installer:githubReleaseChecker');
+            return ee('addon_expert:githubReleaseChecker');
         },
         'updateSourceRegistry' => function($addon) {
             return new UpdateSourceRegistry();
         },
         'UpdateSourceRegistry' => function($addon) {
-            return ee('addon_installer:updateSourceRegistry');
+            return ee('addon_expert:updateSourceRegistry');
         },
         'trustStore' => function($addon) {
             return new TrustStore();
         },
         'TrustStore' => function($addon) {
-            return ee('addon_installer:trustStore');
+            return ee('addon_expert:trustStore');
         },
         'installAuditor' => function($addon) {
             return new InstallAuditor();
         },
         'InstallAuditor' => function($addon) {
-            return ee('addon_installer:installAuditor');
+            return ee('addon_expert:installAuditor');
         },
         'settingsStore' => function($addon) {
             return new SettingsStore();
         },
         'SettingsStore' => function($addon) {
-            return ee('addon_installer:settingsStore');
+            return ee('addon_expert:settingsStore');
         },
         'overrideStore' => function($addon) {
             return new OverrideStore();
         },
         'OverrideStore' => function($addon) {
-            return ee('addon_installer:overrideStore');
+            return ee('addon_expert:overrideStore');
         },
         'compatibilityScanner' => function($addon) {
             return new CompatibilityScanner();
         },
         'CompatibilityScanner' => function($addon) {
-            return ee('addon_installer:compatibilityScanner');
+            return ee('addon_expert:compatibilityScanner');
         },
         'autoFinalizer' => function($addon) {
             return new AutoFinalizer(
-                ee('addon_installer:installAuditor')
+                ee('addon_expert:installAuditor')
             );
         },
         'AutoFinalizer' => function($addon) {
-            return ee('addon_installer:autoFinalizer');
+            return ee('addon_expert:autoFinalizer');
         },
         'releaseInstaller' => function($addon) {
             return new ReleaseInstaller(
                 null,
-                ee('addon_installer:githubReleaseChecker'),
-                ee('addon_installer:trustStore'),
-                ee('addon_installer:installAuditor'),
-                ee('addon_installer:autoFinalizer'),
-                ee('addon_installer:overrideStore')
+                ee('addon_expert:githubReleaseChecker'),
+                ee('addon_expert:trustStore'),
+                ee('addon_expert:installAuditor'),
+                ee('addon_expert:autoFinalizer'),
+                ee('addon_expert:overrideStore')
             );
         },
         'ReleaseInstaller' => function($addon) {
-            return ee('addon_installer:releaseInstaller');
+            return ee('addon_expert:releaseInstaller');
         },
         'packageInstaller' => function($addon) {
             return new PackageInstaller(
                 null,
-                ee('addon_installer:updateSourceRegistry'),
-                ee('addon_installer:githubReleaseChecker'),
-                ee('addon_installer:autoFinalizer'),
-                ee('addon_installer:installAuditor'),
-                ee('addon_installer:overrideStore'),
-                ee('addon_installer:compatibilityScanner')
+                ee('addon_expert:updateSourceRegistry'),
+                ee('addon_expert:githubReleaseChecker'),
+                ee('addon_expert:autoFinalizer'),
+                ee('addon_expert:installAuditor'),
+                ee('addon_expert:overrideStore'),
+                ee('addon_expert:compatibilityScanner')
             );
         },
         'PackageInstaller' => function($addon) {
-            return ee('addon_installer:packageInstaller');
+            return ee('addon_expert:packageInstaller');
         },
     ],
 ];

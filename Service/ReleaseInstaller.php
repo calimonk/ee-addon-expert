@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 use RuntimeException;
 use ZipArchive;
@@ -71,7 +71,7 @@ class ReleaseInstaller
     {
         if ($this->overrides === null) {
             $this->overrides = function_exists('ee')
-                ? ee('addon_installer:overrideStore')
+                ? ee('addon_expert:overrideStore')
                 : new OverrideStore();
         }
         return $this->overrides;
@@ -226,12 +226,12 @@ class ReleaseInstaller
 
         $this->checker->forget($ownerRepo);
 
-        // Self-update = updating addon_installer itself. Surfaced in the
+        // Self-update = updating addon_expert itself. Surfaced in the
         // audit log so post-incident forensics can distinguish "the
         // installer broke during a self-update" from "during an update
         // of some other addon" — historically the former has been the
         // higher-risk case.
-        $isSelf = $shortName === 'addon_installer';
+        $isSelf = $shortName === 'addon_expert';
 
         // Schedule the EE-side finalize. The actual upd::update() +
         // version-bump happens on the NEXT request — for self-update
@@ -465,7 +465,7 @@ class ReleaseInstaller
         try {
             $root = $this->locateAddonRoot($zip, $shortName);
 
-            $staging = $this->addonsPath . '.addon_installer_staging_' . $shortName . '_' . time();
+            $staging = $this->addonsPath . '.addon_expert_staging_' . $shortName . '_' . time();
             if (is_dir($staging)) {
                 $this->removeDirectory($staging);
             }
@@ -658,13 +658,13 @@ class ReleaseInstaller
      * Move the existing addon dir aside and rename staging into place.
      * Keeps exactly one previous backup (older ones are removed first).
      *
-     * Backups live in `system/user/cache/addon_installer/backups/{short}/{ts}/`
+     * Backups live in `system/user/cache/addon_expert/backups/{short}/{ts}/`
      * — explicitly OUTSIDE `system/user/addons/` so EE's PSR-4 addon
      * discovery never sees them. The earlier scheme of
      * `system/user/addons/.{short}.backup.{ts}/` collided with the
      * autoloader: even though the directory name starts with a dot, EE
      * walked the addons dir and registered the backup as a second
-     * namespace-`JavidFazaeli\AddonInstaller` source, fatally confusing
+     * namespace-`Codebit\AddonExpert` source, fatally confusing
      * the class loader during self-updates (1.3.0 bug, see issue #N).
      *
      * Cross-filesystem move: the cache dir CAN be on a different mount
@@ -758,7 +758,7 @@ class ReleaseInstaller
     {
         if ($this->finalizer === null) {
             $this->finalizer = function_exists('ee')
-                ? ee('addon_installer:autoFinalizer')
+                ? ee('addon_expert:autoFinalizer')
                 : new AutoFinalizer($this->auditor);
         }
         return $this->finalizer;
@@ -772,7 +772,7 @@ class ReleaseInstaller
             : sys_get_temp_dir();
 
         return rtrim($base, DIRECTORY_SEPARATOR)
-            . DIRECTORY_SEPARATOR . 'addon_installer'
+            . DIRECTORY_SEPARATOR . 'addon_expert'
             . DIRECTORY_SEPARATOR . 'backups'
             . DIRECTORY_SEPARATOR . $shortName;
     }

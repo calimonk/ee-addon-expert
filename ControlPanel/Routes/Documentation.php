@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\ControlPanel\Routes;
+namespace Codebit\AddonExpert\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
 
@@ -24,13 +24,13 @@ class Documentation extends AbstractRoute
      */
     public function process($id = false)
     {
-        $this->addBreadcrumb('index', 'Addon Manager +');
+        $this->addBreadcrumb('index', 'Addon Expert');
         $this->addBreadcrumb('documentation', 'Documentation');
         $this->loadStyle();
 
         $this->setBody('Documentation', [
-            'upload_url' => ee('CP/URL')->make('addons/settings/addon_installer/index')->compile(),
-            'packages_url' => ee('CP/URL')->make('addons/settings/addon_installer/packages')->compile(),
+            'upload_url' => ee('CP/URL')->make('addons/settings/addon_expert/index')->compile(),
+            'packages_url' => ee('CP/URL')->make('addons/settings/addon_expert/packages')->compile(),
             'manager_url' => ee('CP/URL')->make('addons')->compile(),
         ]);
 

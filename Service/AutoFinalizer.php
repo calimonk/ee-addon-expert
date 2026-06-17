@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 use RuntimeException;
 
@@ -23,7 +23,7 @@ use RuntimeException;
  *   4. Bump `exp_modules.module_version` to the on-disk version
  *   5. Same for extension class + `exp_extensions.version` (if any)
  *
- * Self-update note: when finalizing addon_installer itself, this is
+ * Self-update note: when finalizing addon_expert itself, this is
  * called in a NEW request (the one after the install-time 302), so
  * PHP loads the NEW upd class fresh — we run the new code, not the
  * old in-memory version. That's exactly why the install writes a
@@ -51,7 +51,7 @@ class AutoFinalizer
     public static function defaultCacheRoot(): string
     {
         $base = defined('SYSPATH') ? SYSPATH . 'user/cache' : sys_get_temp_dir();
-        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'addon_installer';
+        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'addon_expert';
     }
 
     private function pendingDir(): string
@@ -137,7 +137,7 @@ class AutoFinalizer
                         'from'       => $outcome['from'] ?? ($marker['from_version'] ?? null),
                         'to'         => $outcome['to'] ?? ($marker['to_version'] ?? null),
                         'parts'      => $outcome['parts'] ?? [],
-                        'is_self'    => $shortName === 'addon_installer',
+                        'is_self'    => $shortName === 'addon_expert',
                     ]);
                     $result['finalized'][$shortName] = $outcome;
                 } else {

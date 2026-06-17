@@ -9,10 +9,10 @@
 
 ## Install The Add-on
 
-1. Copy `addon_installer/` into `system/user/addons/`.
+1. Copy `addon_expert/` into `system/user/addons/`.
 2. Open ExpressionEngine **Developer > Add-Ons**.
-3. Find **Addon Manager +** and click **Install**.
-4. Click **Settings** next to Addon Manager + to open it.
+3. Find **Addon Expert** and click **Install**.
+4. Click **Settings** next to Addon Expert to open it.
 
 ## Verify Setup
 

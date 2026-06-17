@@ -6,7 +6,7 @@ if (! defined('BASEPATH')) {
 
 use ExpressionEngine\Service\Addon\Module;
 
-class Addon_installer extends Module
+class Addon_expert extends Module
 {
-    protected $addon_name = 'addon_installer';
+    protected $addon_name = 'addon_expert';
 }

@@ -6,7 +6,7 @@ if (! defined('BASEPATH')) {
 
 use ExpressionEngine\Service\Addon\Mcp;
 
-class Addon_installer_mcp extends Mcp
+class Addon_expert_mcp extends Mcp
 {
-    protected $addon_name = 'addon_installer';
+    protected $addon_name = 'addon_expert';
 }

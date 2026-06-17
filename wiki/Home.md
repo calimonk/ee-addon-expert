@@ -1,6 +1,6 @@
-# Addon Manager + Wiki
+# Addon Expert Wiki
 
-Addon Manager + is an ExpressionEngine 7 control panel add-on for managing
+Addon Expert is an ExpressionEngine 7 control panel add-on for managing
 third-party add-on ZIP packages without leaving the control panel.
 
 ## Pages

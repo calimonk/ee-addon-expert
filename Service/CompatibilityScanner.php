@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 /**
  * Heuristic static scan for version-gated PHP syntax / functions.

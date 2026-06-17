@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-17 — Renamed to Addon Expert
+
+This is the same codebase as 1.7.0, **spun off into an independently
+maintained product**. The plugin began as a fork of
+[Addon Manager +](https://github.com/jfaza/addon-manager-plus) by Javid
+Fazaeli (MIT) and has since added GitHub release tracking, one-click
+updates, auto-finalize, supply-chain (TOFU) protection, requirement
+override + compatibility scanner, and CP custom-menu integration —
+diverging far enough that it's now its own thing. Credit to Javid for
+the original ZIP-upload installer.
+
+### Changed (breaking)
+- **Short name `addon_installer` → `addon_expert`.** EE identifies
+  add-ons by short name, so EE treats this as a new add-on. See the
+  migration note below — existing config is carried over automatically.
+- **Product name** "Addon Manager +" → **"Addon Expert"**.
+- **Namespace** `JavidFazaeli\AddonInstaller` → `Codebit\AddonExpert`.
+- **Author** → Codebit (Javid credited as original author in LICENSE +
+  README).
+- All CP routes move from `addons/settings/addon_installer/*` to
+  `addons/settings/addon_expert/*`.
+- Config/cache files move from `addon_installer_*.json` /
+  `user/cache/addon_installer/` to the `addon_expert` equivalents.
+
+### Migration (automatic)
+- On install/update, `upd.addon_expert.php` **copies** any existing
+  `addon_installer_*.json` config (GitHub mappings, TOFU trust anchors,
+  settings, requirement overrides) and the `user/cache/addon_installer/`
+  tree (release cache, audit log, backups) to the new `addon_expert`
+  names — only when the new file/dir doesn't already exist, never
+  clobbering. Originals are left in place, so the old add-on keeps
+  working until you uninstall it and a rollback loses nothing.
+- **To upgrade an existing `addon_installer` install:** install Addon
+  Expert (config migrates automatically), confirm the Releases /
+  trust / overrides screens look right, then uninstall the old
+  "Addon Manager +". Re-add the CP custom-menu entry (Settings → Menu
+  Manager) since it points at the new short name.
+
 ## [1.7.0] - 2026-06-03
 
 ### Added — Compatibility feature scan (informed force)

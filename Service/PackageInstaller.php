@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 use RuntimeException;
 use ZipArchive;
@@ -38,7 +38,7 @@ class PackageInstaller
     {
         if ($this->sources === null) {
             $this->sources = function_exists('ee')
-                ? ee('addon_installer:updateSourceRegistry')
+                ? ee('addon_expert:updateSourceRegistry')
                 : new UpdateSourceRegistry(null, $this->addonsPath);
         }
         return $this->sources;
@@ -48,7 +48,7 @@ class PackageInstaller
     {
         if ($this->releases === null) {
             $this->releases = function_exists('ee')
-                ? ee('addon_installer:githubReleaseChecker')
+                ? ee('addon_expert:githubReleaseChecker')
                 : new GitHubReleaseChecker();
         }
         return $this->releases;
@@ -58,7 +58,7 @@ class PackageInstaller
     {
         if ($this->finalizer === null) {
             $this->finalizer = function_exists('ee')
-                ? ee('addon_installer:autoFinalizer')
+                ? ee('addon_expert:autoFinalizer')
                 : new AutoFinalizer();
         }
         return $this->finalizer;
@@ -68,7 +68,7 @@ class PackageInstaller
     {
         if ($this->auditor === null) {
             $this->auditor = function_exists('ee')
-                ? ee('addon_installer:installAuditor')
+                ? ee('addon_expert:installAuditor')
                 : new InstallAuditor();
         }
         return $this->auditor;
@@ -78,7 +78,7 @@ class PackageInstaller
     {
         if ($this->overrides === null) {
             $this->overrides = function_exists('ee')
-                ? ee('addon_installer:overrideStore')
+                ? ee('addon_expert:overrideStore')
                 : new OverrideStore();
         }
         return $this->overrides;
@@ -88,7 +88,7 @@ class PackageInstaller
     {
         if ($this->scanner === null) {
             $this->scanner = function_exists('ee')
-                ? ee('addon_installer:compatibilityScanner')
+                ? ee('addon_expert:compatibilityScanner')
                 : new CompatibilityScanner();
         }
         return $this->scanner;
@@ -141,7 +141,7 @@ class PackageInstaller
 
         foreach ($candidates as $candidate) {
             $path = rtrim((string) $candidate, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-            if (is_dir($path) && is_file($path . 'addon_installer' . DIRECTORY_SEPARATOR . 'addon.setup.php')) {
+            if (is_dir($path) && is_file($path . 'addon_expert' . DIRECTORY_SEPARATOR . 'addon.setup.php')) {
                 return $path;
             }
         }
@@ -168,8 +168,8 @@ class PackageInstaller
     public function installedPackages(): array
     {
         $packages = [];
-        $returnUrl = ee('CP/URL')->make('addons/settings/addon_installer/packages')->encode();
-        $releasesPostUrl = ee('CP/URL')->make('addons/settings/addon_installer/releases')->compile();
+        $returnUrl = ee('CP/URL')->make('addons/settings/addon_expert/packages')->encode();
+        $releasesPostUrl = ee('CP/URL')->make('addons/settings/addon_expert/releases')->compile();
 
         foreach (glob($this->addonsPath . '*', GLOB_ONLYDIR) ?: [] as $path) {
             $setup = $path . DIRECTORY_SEPARATOR . 'addon.setup.php';
@@ -239,7 +239,7 @@ class PackageInstaller
                 'remove_url' => $isInstalled
                     ? ee('CP/URL')->make('addons/remove/' . $shortName, ['return' => $returnUrl])->compile()
                     : '',
-                'download_url' => ee('CP/URL')->make('addons/settings/addon_installer/packages', [
+                'download_url' => ee('CP/URL')->make('addons/settings/addon_expert/packages', [
                     'download' => $shortName,
                 ])->compile(),
             ];
@@ -303,7 +303,7 @@ class PackageInstaller
         // trust column shows "unverified" until the next refresh.
         $cachedIdentity = $checker->repoIdentityCached($repo);
         $trustCmp = function_exists('ee')
-            ? ee('addon_installer:trustStore')->compare($repo, $cachedIdentity)
+            ? ee('addon_expert:trustStore')->compare($repo, $cachedIdentity)
             : (new TrustStore())->compare($repo, $cachedIdentity);
         $trustState = $cachedIdentity === null
             ? ($trustCmp['pinned'] !== null ? 'trusted' : 'none')
@@ -591,7 +591,7 @@ class PackageInstaller
                             'reason'       => $overrideReason,
                             'scan_verdict' => $scanVerdict,
                             'scan'         => $scanSummary,
-                            'is_self'      => $shortName === 'addon_installer',
+                            'is_self'      => $shortName === 'addon_expert',
                         ]);
                     } catch (\Throwable $e) {
                         // non-fatal
@@ -637,7 +637,7 @@ class PackageInstaller
                     'version'     => $newVersion,
                     'from'        => $oldVersion,
                     'source'      => 'upload_zip',
-                    'is_self'     => $shortName === 'addon_installer',
+                    'is_self'     => $shortName === 'addon_expert',
                 ]);
             } catch (\Throwable $e) {
                 // Audit failure is non-fatal.
@@ -652,7 +652,7 @@ class PackageInstaller
                 'settings_url' => ee('CP/URL')->make('addons/settings/' . $shortName)->compile(),
                 'manager_url'  => ee('CP/URL')->make('addons')->compile(),
                 'install_url'  => ee('CP/URL')->make('addons/install/' . $shortName, [
-                    'return' => ee('CP/URL')->make('addons/settings/addon_installer/packages')->encode(),
+                    'return' => ee('CP/URL')->make('addons/settings/addon_expert/packages')->encode(),
                 ])->compile(),
             ];
         } finally {

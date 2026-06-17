@@ -1,10 +1,16 @@
-# Addon Manager +
+# Addon Expert
 
-**Install and manage ExpressionEngine add-on ZIP packages directly from the EE 7 control panel.**
+**Install, update, and track ExpressionEngine add-ons from the EE 7 control panel — ZIP uploads, GitHub releases, one-click updates, and supply-chain checks.**
 
-Author: Javid Fazaeli  
-License: MIT  
-Version: 1.1.0
+Maintainer: Codebit · License: MIT · Version: 2.0.0
+
+> **Addon Expert is a fork of [Addon Manager +](https://github.com/jfaza/addon-manager-plus)
+> by Javid Fazaeli** (MIT), extended with GitHub release tracking, one-click
+> updates, auto-finalize, supply-chain (TOFU) protection, a requirement
+> override with a compatibility scanner, and a CP custom-menu integration.
+> The original ZIP-upload installer is Javid's work; the additions are
+> maintained independently by Codebit. Full credit to Javid for the
+> foundation.
 
 ---
 
@@ -18,7 +24,7 @@ The standard ExpressionEngine add-on installation workflow involves:
 4. Upload that folder to `system/user/addons/` via FTP or SSH.
 5. Return to the ExpressionEngine control panel to complete the install.
 
-Addon Manager + keeps more of this workflow inside the control panel: upload the ZIP, and the add-on detects the real folder, extracts it into the correct location, and presents the install button — all without touching FTP.
+Addon Expert keeps more of this workflow inside the control panel: upload the ZIP, and the add-on detects the real folder, extracts it into the correct location, and presents the install button — all without touching FTP.
 
 ## Features
 
@@ -41,16 +47,16 @@ Addon Manager + keeps more of this workflow inside the control panel: upload the
 
 ## Installation
 
-1. Copy the `addon_installer/` folder into `system/user/addons/`.
+1. Copy the `addon_expert/` folder into `system/user/addons/`.
 2. In ExpressionEngine, open **Developer > Add-Ons**.
-3. Find **Addon Manager +** and click **Install**.
-4. Click **Settings** next to Addon Manager + to open it.
+3. Find **Addon Expert** and click **Install**.
+4. Click **Settings** next to Addon Expert to open it.
 
 ## Usage
 
 ### Uploading a package
 
-1. Go to **Addon Manager + > Install ZIP**.
+1. Go to **Addon Expert > Install ZIP**.
 2. Select a ZIP file and upload it.
 3. On success, click **Install** in the notice, or find the add-on on the Packages screen.
 
@@ -106,7 +112,7 @@ Loose add-on files at the ZIP root are rejected because the installer cannot inf
 ## Known Limitations
 
 - Only ZIP archives are supported; `.tar.gz` and other formats are not.
-- Addon Manager + does not publish or fetch packages from a remote registry; all packages must be uploaded manually.
+- Addon Expert does not publish or fetch packages from a remote registry; all packages must be uploaded manually.
 - The download feature regenerates ZIPs from the current on-disk files, not from the original uploaded archive.
 
 ## Screenshots
@@ -127,7 +133,7 @@ Loose add-on files at the ZIP root are rejected because the installer cannot inf
 
 ## Tracking GitHub Releases
 
-Addon Manager + can poll GitHub Releases for every installed add-on and surface
+Addon Expert can poll GitHub Releases for every installed add-on and surface
 a single "updates available" count in the EE CP sidebar — covering EE-store
 add-ons (the existing upload flow) AND add-ons distributed on GitHub.
 
@@ -135,9 +141,9 @@ Two resolution layers, in priority order:
 
 1. **Author-declared.** Add `'github_repo' => 'owner/repo'` to the add-on's
    `addon.setup.php`. Opt-in, decentralized, survives admin reinstall.
-2. **Admin-mapped.** Open **Addon Manager + → Releases** and fill in
+2. **Admin-mapped.** Open **Addon Expert → Releases** and fill in
    `owner/repo` for any installed add-on whose author hasn't declared one.
-   Persisted to `system/user/config/addon_installer_mappings.json`.
+   Persisted to `system/user/config/addon_expert_mappings.json`.
 
 The Releases screen lists every installed add-on with its installed version,
 mapped repo, latest release, and last-check timestamp. Click **Check for
@@ -162,7 +168,7 @@ Clicking it:
    `addon.setup.php` whose parent folder matches `short_name`. Falls
    back to the wrapper root for single-add-on source zipballs.
 6. Moves the existing add-on to
-   `system/user/cache/addon_installer/backups/{short_name}/{ts}/` (only
+   `system/user/cache/addon_expert/backups/{short_name}/{ts}/` (only
    one backup per short_name is kept — older ones are removed first).
    The backup lives explicitly OUTSIDE `system/user/addons/` so EE's
    PSR-4 addon discovery can't see it; `rename()` is attempted first,
@@ -186,12 +192,12 @@ unauthenticated quota per IP is far above any realistic site's add-on count.
 GitHub-distributed add-ons sit in a known attack class: an upstream maintainer
 can lose control of their account, sell the repo, or have it deleted and
 re-claimed by a malicious actor under the same `owner/repo` name (RepoJacking).
-Addon Manager + treats every install path as a supply-chain decision and
+Addon Expert treats every install path as a supply-chain decision and
 pins a **trust anchor** on first use.
 
 - On the first install of a GitHub-mapped add-on, the GitHub-controlled stable
   identifiers — owner numeric ID, repo numeric ID, repo `created_at` — are
-  pinned to `system/user/config/addon_installer_trust.json` alongside which
+  pinned to `system/user/config/addon_expert_trust.json` alongside which
   EE admin pinned them and when.
 - Every install attempt re-fetches identity from GitHub **bypassing the cache**
   and compares. Any mismatch hard-blocks the install and surfaces a banner
@@ -203,10 +209,10 @@ pins a **trust anchor** on first use.
   `⚠ CHANGED`, `unverified`) and offers a **Reconfirm trust** action for
   legitimate identity changes. Reconfirming is itself audit-logged.
 - Every install and trust event writes to
-  `system/user/cache/addon_installer/install.log` (JSONL, last 25 events
+  `system/user/cache/addon_expert/install.log` (JSONL, last 25 events
   shown on the Releases screen). Useful for forensics after the fact.
 
-The same rules apply to Addon Manager +'s own self-update — a hostile
+The same rules apply to Addon Expert's own self-update — a hostile
 takeover of our own repo would otherwise become a vector via the one-click
 flow.
 

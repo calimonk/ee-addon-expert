@@ -4,12 +4,12 @@ if (! defined('BASEPATH')) {
     exit('No direct script access allowed');
 }
 
-use JavidFazaeli\AddonInstaller\Service\SettingsStore;
+use Codebit\AddonExpert\Service\SettingsStore;
 
 /**
- * Addon Manager + extension.
+ * Addon Expert extension.
  *
- * Single hook today: cp_custom_menu — lets the admin pin Add-on Manager +
+ * Single hook today: cp_custom_menu — lets the admin pin Addon Expert
  * (and its pending-update count) into EE's per-role Custom sidebar
  * section. Behavior is gated by SettingsStore (see Settings screen):
  *
@@ -17,16 +17,16 @@ use JavidFazaeli\AddonInstaller\Service\SettingsStore;
  *   - custom_menu_target      'releases'|'packages'|'index'  (default 'releases')
  *   - custom_menu_show_count  'y'|'n'  (default 'y')
  *
- * The admin must STILL add Add-on Manager + to their role's Custom menu
+ * The admin must STILL add Addon Expert to their role's Custom menu
  * via Settings → Menu Manager (/cp/settings/menu-manager/). EE designed
  * it that way so addons can't force-clutter every admin's nav. This
  * hook customises what's rendered once the admin has opted in.
  */
-class Addon_installer_ext
+class Addon_expert_ext
 {
-    public $name        = 'Addon Manager +';
-    public $version     = '1.7.0';
-    public $description = 'Custom-menu integration for Addon Manager +';
+    public $name        = 'Addon Expert';
+    public $version     = '2.0.0';
+    public $description = 'Custom-menu integration for Addon Expert';
     public $docs_url    = 'https://github.com/calimonk/ee-addon-manager';
     public $settings_exist = 'n'; // Settings live in our own Settings screen.
     public $settings    = [];
@@ -52,7 +52,7 @@ class Addon_installer_ext
         // misconfiguration, etc). Either way the SettingsStore reads
         // from the same JSON file.
         try {
-            $settings = ee('addon_installer:settingsStore');
+            $settings = ee('addon_expert:settingsStore');
             if (! ($settings instanceof SettingsStore)) {
                 $settings = new SettingsStore();
             }
@@ -69,7 +69,7 @@ class Addon_installer_ext
             ? $target
             : 'releases';
 
-        $url = ee('CP/URL')->make('addons/settings/addon_installer/' . $route);
+        $url = ee('CP/URL')->make('addons/settings/addon_expert/' . $route);
 
         $label = (string) $settings->get('custom_menu_label');
         if ($label === '') {
@@ -77,7 +77,7 @@ class Addon_installer_ext
         }
         if ($settings->get('custom_menu_show_count') === 'y') {
             try {
-                $count = (int) ee('addon_installer:packageInstaller')->remoteUpdateCount();
+                $count = (int) ee('addon_expert:packageInstaller')->remoteUpdateCount();
                 if ($count > 0) {
                     $label .= ' (' . $count . ')';
                 }
@@ -92,7 +92,7 @@ class Addon_installer_ext
 
     /**
      * EE calls activate_extension() when the extension is enabled. We
-     * also call this from upd.addon_installer.php::install() so the
+     * also call this from upd.addon_expert.php::install() so the
      * hook is registered the moment the addon is installed.
      */
     public function activate_extension()

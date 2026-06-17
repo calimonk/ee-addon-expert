@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 /**
  * Append-only audit log of every install / refresh / trust event.
@@ -33,7 +33,7 @@ class InstallAuditor
     {
         $base = defined('SYSPATH') ? SYSPATH . 'user/cache' : sys_get_temp_dir();
         return rtrim($base, DIRECTORY_SEPARATOR)
-            . DIRECTORY_SEPARATOR . 'addon_installer'
+            . DIRECTORY_SEPARATOR . 'addon_expert'
             . DIRECTORY_SEPARATOR . 'install.log';
     }
 

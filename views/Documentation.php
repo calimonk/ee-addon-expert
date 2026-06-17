@@ -10,7 +10,7 @@ $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
   <section class="addi-card">
     <h2>Documentation</h2>
-    <p class="addi-muted">Addon Manager + uploads add-on ZIP files, detects the actual add-on folder from the package's <code>addon.setup.php</code>, and extracts it into the active ExpressionEngine add-ons directory.</p>
+    <p class="addi-muted">Addon Expert uploads add-on ZIP files, detects the actual add-on folder from the package's <code>addon.setup.php</code>, and extracts it into the active ExpressionEngine add-ons directory.</p>
   </section>
 
   <section class="addi-card">

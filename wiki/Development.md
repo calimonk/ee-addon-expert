@@ -10,8 +10,8 @@
 
 ## Compatibility Rule
 
-Keep the folder and short name as `addon_installer` unless a migration plan is
-created. The public product name is Addon Manager +, but the short name keeps
+Keep the folder and short name as `addon_expert` unless a migration plan is
+created. The public product name is Addon Expert, but the short name keeps
 existing installs and routes stable.
 
 ## Lint

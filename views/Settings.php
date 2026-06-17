@@ -18,8 +18,8 @@ $lazyRefresh  = ($values['lazy_refresh'] ?? 'y') === 'y';
   <section class="addi-card">
     <h2>Settings</h2>
     <p class="addi-muted" style="font-size:13px">
-      These settings control behaviour of the Add-on Manager + Custom-menu
-      integration. The admin still needs to add <strong>Add-on Manager +</strong>
+      These settings control behaviour of the Addon Expert Custom-menu
+      integration. The admin still needs to add <strong>Addon Expert</strong>
       to the Custom menu via <code>Settings → Menu Manager</code>
       (<code>/cp/settings/menu-manager/</code>); this screen only configures
       what we render once they've done so.
@@ -37,7 +37,7 @@ $lazyRefresh  = ($values['lazy_refresh'] ?? 'y') === 'y';
 
         <label style="display:block;margin:8px 0 14px">
           <input type="checkbox" name="show_in_custom_menu" value="y" <?= $showInMenu ? 'checked' : '' ?>>
-          <strong>Surface Add-on Manager + in the CP Custom menu</strong>
+          <strong>Surface Addon Expert in the CP Custom menu</strong>
           <div class="addi-muted" style="font-size:12px;margin-left:22px">
             When unchecked, the <code>cp_custom_menu</code> hook stays
             registered but renders nothing. Useful for temporarily silencing

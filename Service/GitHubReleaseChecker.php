@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 /**
  * Fetches the latest release for a GitHub repo and caches it on disk.
@@ -43,7 +43,7 @@ class GitHubReleaseChecker
             ? SYSPATH . 'user/cache'
             : sys_get_temp_dir();
 
-        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'addon_installer';
+        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'addon_expert';
     }
 
     /**

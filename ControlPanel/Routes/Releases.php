@@ -1,11 +1,11 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\ControlPanel\Routes;
+namespace Codebit\AddonExpert\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
-use JavidFazaeli\AddonInstaller\Service\GitHubReleaseChecker;
-use JavidFazaeli\AddonInstaller\Service\ReleaseInstaller;
-use JavidFazaeli\AddonInstaller\Service\UpdateSourceRegistry;
+use Codebit\AddonExpert\Service\GitHubReleaseChecker;
+use Codebit\AddonExpert\Service\ReleaseInstaller;
+use Codebit\AddonExpert\Service\UpdateSourceRegistry;
 
 class Releases extends AbstractRoute
 {
@@ -23,20 +23,20 @@ class Releases extends AbstractRoute
      */
     public function process($id = false)
     {
-        $this->addBreadcrumb('index', 'Addon Manager +');
+        $this->addBreadcrumb('index', 'Addon Expert');
         $this->addBreadcrumb('releases', 'Releases');
         $this->loadStyle();
 
-        $installer        = ee('addon_installer:packageInstaller');
-        $registry         = ee('addon_installer:updateSourceRegistry');
-        $checker          = ee('addon_installer:githubReleaseChecker');
-        $releaseInstaller = ee('addon_installer:releaseInstaller');
-        $trust            = ee('addon_installer:trustStore');
-        $auditor          = ee('addon_installer:installAuditor');
-        $finalizer        = ee('addon_installer:autoFinalizer');
-        $settings         = ee('addon_installer:settingsStore');
+        $installer        = ee('addon_expert:packageInstaller');
+        $registry         = ee('addon_expert:updateSourceRegistry');
+        $checker          = ee('addon_expert:githubReleaseChecker');
+        $releaseInstaller = ee('addon_expert:releaseInstaller');
+        $trust            = ee('addon_expert:trustStore');
+        $auditor          = ee('addon_expert:installAuditor');
+        $finalizer        = ee('addon_expert:autoFinalizer');
+        $settings         = ee('addon_expert:settingsStore');
 
-        $selfUrl = ee('CP/URL')->make('addons/settings/addon_installer/releases');
+        $selfUrl = ee('CP/URL')->make('addons/settings/addon_expert/releases');
 
         // ---- Auto-finalize pending EE-side updates ----
         // Any release the installer recently swapped on disk has a
@@ -163,7 +163,7 @@ class Releases extends AbstractRoute
                 $body .= ' Next step: open ';
                 $body .= '<a href="' . htmlspecialchars($addonsUrl, ENT_QUOTES, 'UTF-8') . '">Developer → Add-Ons</a>';
                 $body .= ' and click the <strong>Update</strong> prompt on the ';
-                $body .= htmlspecialchars($isSelf ? 'Add-on Manager +' : $shortName, ENT_QUOTES, 'UTF-8');
+                $body .= htmlspecialchars($isSelf ? 'Addon Expert' : $shortName, ENT_QUOTES, 'UTF-8');
                 $body .= ' card to finalize the install (DB version bump + any migrations).';
 
                 ee('CP/Alert')->makeBanner('addon-installer-release-install')
@@ -258,9 +258,9 @@ class Releases extends AbstractRoute
             'save_url'         => $selfUrl->compile(),
             'csrf_token'       => $installer->csrfToken(),
             'manager_url'      => ee('CP/URL')->make('addons')->compile(),
-            'packages_url'     => ee('CP/URL')->make('addons/settings/addon_installer/packages')->compile(),
-            'audit_url'        => ee('CP/URL')->make('addons/settings/addon_installer/audit-log')->compile(),
-            'docs_url'         => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
+            'packages_url'     => ee('CP/URL')->make('addons/settings/addon_expert/packages')->compile(),
+            'audit_url'        => ee('CP/URL')->make('addons/settings/addon_expert/audit-log')->compile(),
+            'docs_url'         => ee('CP/URL')->make('addons/settings/addon_expert/documentation')->compile(),
             'finalize_results' => $finalizeResults,
         ]);
 

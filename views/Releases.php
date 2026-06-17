@@ -27,7 +27,7 @@ $fmtAge = function (int $ts): string {
   <section class="addi-card">
     <h2>GitHub Release Tracking</h2>
     <p class="addi-muted">
-      For each installed add-on, point Addon Manager + at a GitHub repo. The
+      For each installed add-on, point Addon Expert at a GitHub repo. The
       latest release is polled and compared against the on-disk version. Add-ons
       whose <code>addon.setup.php</code> declares <code>'github_repo' =&gt; 'owner/repo'</code>
       are mapped automatically — you only need to fill in the rest.

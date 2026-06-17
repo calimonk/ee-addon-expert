@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\ControlPanel\Routes;
+namespace Codebit\AddonExpert\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
 
@@ -20,12 +20,12 @@ class Settings extends AbstractRoute
      */
     public function process($id = false)
     {
-        $this->addBreadcrumb('index', 'Addon Manager +');
+        $this->addBreadcrumb('index', 'Addon Expert');
         $this->addBreadcrumb('settings', 'Settings');
         $this->loadStyle();
 
-        $store = ee('addon_installer:settingsStore');
-        $selfUrl = ee('CP/URL')->make('addons/settings/addon_installer/settings');
+        $store = ee('addon_expert:settingsStore');
+        $selfUrl = ee('CP/URL')->make('addons/settings/addon_expert/settings');
 
         if (ee('Request')->isPost() && ee()->input->post('save_settings')) {
             $incoming = [
@@ -54,14 +54,14 @@ class Settings extends AbstractRoute
         }
 
         $values = $store->all();
-        $installer = ee('addon_installer:packageInstaller');
+        $installer = ee('addon_expert:packageInstaller');
 
         $this->setBody('Settings', [
             'values'      => $values,
             'save_url'    => $selfUrl->compile(),
             'csrf_token'  => $installer->csrfToken(),
             'manager_url' => ee('CP/URL')->make('addons')->compile(),
-            'docs_url'    => ee('CP/URL')->make('addons/settings/addon_installer/documentation')->compile(),
+            'docs_url'    => ee('CP/URL')->make('addons/settings/addon_expert/documentation')->compile(),
         ]);
 
         return $this;

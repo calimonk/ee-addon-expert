@@ -1,6 +1,6 @@
 <?php
 
-namespace JavidFazaeli\AddonInstaller\Service;
+namespace Codebit\AddonExpert\Service;
 
 /**
  * Addon-level settings store. Persistent across cache wipes (lives in
@@ -62,7 +62,7 @@ class SettingsStore
         $base = defined('SYSPATH') ? SYSPATH . 'user/config' : sys_get_temp_dir();
         return rtrim($base, DIRECTORY_SEPARATOR)
             . DIRECTORY_SEPARATOR
-            . 'addon_installer_settings.json';
+            . 'addon_expert_settings.json';
     }
 
     public function get(string $key, $default = null)
