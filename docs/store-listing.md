@@ -4,9 +4,10 @@ Paste-ready copy for the EE vendor submission form, mirroring the field
 layout (Essentials / Add-on Versions / Add-on Icon / Version
 Compatibility / Software License / Supporting Assets).
 
-> **Status:** copy is final. Listed as **Free / MIT**. URLs use branded
-> `codebit.nl/addon-expert/*` pages — those pages must exist before the
-> listing links resolve (see **Before submitting** at the bottom).
+> **Status:** ready to submit. Listed as **Free / MIT**. The branded
+> `codebit.nl/addon-expert/*` pages are live, the icon PNG and zip are
+> built (see below), and codebit.nl lists the product. Nothing is
+> gating submission.
 
 ---
 
@@ -71,7 +72,7 @@ touches your site.
 **Changelog cell text**
 
 ```
-2.1.2 — Documentation and in-CP help refreshed for the full feature set; fixed a stale cache-interval label on the Releases screen. (2.1.0 added the inspect-before-commit upload flow with one-click force; 2.0.0 was the rename from Addon Manager + with automatic config migration.) See the full history at the Changelog URL.
+2.1.2 — New add-on icon, shipped in the package. (2.1.1 refreshed the in-CP documentation and help text; 2.1.0 added the inspect-before-commit upload flow with one-click force; 2.0.0 was the rename from Addon Manager + with automatic config migration.) See the full history at the Changelog URL.
 ```
 
 ---
@@ -133,20 +134,16 @@ README/LICENSE/CHANGELOG only, no docs/screenshots.
 
 ## Before submitting
 
-The only thing gating submission is the four `codebit.nl/addon-expert/*`
-pages — the store links to them and reviewers will click through:
+Everything is in place:
 
-- `/addon-expert` — overview / landing (mirror the elevator pitch + Full
-  Description above; the CF Image landing page is the template).
-- `/addon-expert/docs` — can simply restate the in-CP Documentation
-  screen, or link to the GitHub README/wiki.
-- `/addon-expert/support` — how to get help (GitHub issues link is fine,
-  or a contact form like CF Image's).
-- `/addon-expert/changelog` — mirror `CHANGELOG.md`.
+- The four `codebit.nl/addon-expert/*` pages (landing, docs, support,
+  changelog) are deployed and return 200.
+- codebit.nl lists Addon Expert in Products (with platform filter).
+- Icon PNG and the `v2.1.2` zip are built (paths above); the GitHub
+  release hosts the same zip.
 
-Quickest honest shortcut if you want to submit now: point Docs →
-GitHub README, Support → GitHub issues, Changelog → GitHub CHANGELOG, and
-only build the `/addon-expert` landing page. They're branded-ish via a
-redirect and all resolve immediately.
-
-Everything else (copy, icon, version, license, zip) is ready.
+Reviewer note (worth including in the submission message): Addon Expert
+is an MIT fork of Addon Manager + by Javid Fazaeli, with attribution in
+the listing, README, and LICENSE — substantially extended (GitHub
+tracking, one-click updates, supply-chain checks, compatibility tooling).
+Flagging up front so the fork relationship isn't a surprise in review.
