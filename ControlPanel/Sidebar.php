@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\ControlPanel;
+namespace Nivoli\AddonExpert\ControlPanel;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractSidebar;
 

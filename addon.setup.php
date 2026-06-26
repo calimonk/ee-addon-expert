@@ -1,23 +1,23 @@
 <?php
 
-use Codebit\AddonExpert\Service\AutoFinalizer;
-use Codebit\AddonExpert\Service\CompatibilityScanner;
-use Codebit\AddonExpert\Service\GitHubReleaseChecker;
-use Codebit\AddonExpert\Service\InstallAuditor;
-use Codebit\AddonExpert\Service\OverrideStore;
-use Codebit\AddonExpert\Service\PackageInstaller;
-use Codebit\AddonExpert\Service\ReleaseInstaller;
-use Codebit\AddonExpert\Service\SettingsStore;
-use Codebit\AddonExpert\Service\TrustStore;
-use Codebit\AddonExpert\Service\UpdateSourceRegistry;
+use Nivoli\AddonExpert\Service\AutoFinalizer;
+use Nivoli\AddonExpert\Service\CompatibilityScanner;
+use Nivoli\AddonExpert\Service\GitHubReleaseChecker;
+use Nivoli\AddonExpert\Service\InstallAuditor;
+use Nivoli\AddonExpert\Service\OverrideStore;
+use Nivoli\AddonExpert\Service\PackageInstaller;
+use Nivoli\AddonExpert\Service\ReleaseInstaller;
+use Nivoli\AddonExpert\Service\SettingsStore;
+use Nivoli\AddonExpert\Service\TrustStore;
+use Nivoli\AddonExpert\Service\UpdateSourceRegistry;
 
 return [
     'name'              => 'Addon Expert',
     'description'       => 'Install, update, and track ExpressionEngine add-ons — ZIP uploads, GitHub releases, one-click updates, supply-chain checks. Based on Addon Manager + by Javid Fazaeli (MIT).',
-    'version'           => '2.1.2',
+    'version'           => '2.2.0',
     'author'            => 'Codebit',
     'author_url'        => 'https://codebit.nl',
-    'namespace'         => 'Codebit\AddonExpert',
+    'namespace'         => 'Nivoli\AddonExpert',
     'settings_exist'    => true,
     'github_repo'       => 'calimonk/ee-addon-expert',
     'services.singletons' => [

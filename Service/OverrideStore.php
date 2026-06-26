@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\Service;
+namespace Nivoli\AddonExpert\Service;
 
 /**
  * Registry of add-ons whose declared version requirements have been

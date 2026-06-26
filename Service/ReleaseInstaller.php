@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\Service;
+namespace Nivoli\AddonExpert\Service;
 
 use RuntimeException;
 use ZipArchive;
@@ -664,7 +664,7 @@ class ReleaseInstaller
      * `system/user/addons/.{short}.backup.{ts}/` collided with the
      * autoloader: even though the directory name starts with a dot, EE
      * walked the addons dir and registered the backup as a second
-     * namespace-`Codebit\AddonExpert` source, fatally confusing
+     * namespace-`Nivoli\AddonExpert` source, fatally confusing
      * the class loader during self-updates (1.3.0 bug, see issue #N).
      *
      * Cross-filesystem move: the cache dir CAN be on a different mount

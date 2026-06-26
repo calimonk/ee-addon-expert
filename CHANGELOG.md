@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-26
+
+### Changed
+- Internal PHP namespace moved from `Codebit\AddonExpert` to `Nivoli\AddonExpert`,
+  unifying the first-party add-ons under the Nivoli vendor namespace (alongside
+  CF Image, Game Import, etc.). The legacy module/extension class names are
+  unchanged, so existing installs, settings and stored data are unaffected.
+
 ## [2.1.2] - 2026-06-17
 
 ### Changed
@@ -75,7 +83,7 @@ the original ZIP-upload installer.
   add-ons by short name, so EE treats this as a new add-on. See the
   migration note below — existing config is carried over automatically.
 - **Product name** "Addon Manager +" → **"Addon Expert"**.
-- **Namespace** `JavidFazaeli\AddonInstaller` → `Codebit\AddonExpert`.
+- **Namespace** `JavidFazaeli\AddonInstaller` → `Nivoli\AddonExpert`.
 - **Author** → Codebit (Javid credited as original author in LICENSE +
   README).
 - All CP routes move from `addons/settings/addon_installer/*` to

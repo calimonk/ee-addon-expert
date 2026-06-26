@@ -1,11 +1,11 @@
 <?php
 
-namespace Codebit\AddonExpert\ControlPanel\Routes;
+namespace Nivoli\AddonExpert\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
-use Codebit\AddonExpert\Service\GitHubReleaseChecker;
-use Codebit\AddonExpert\Service\ReleaseInstaller;
-use Codebit\AddonExpert\Service\UpdateSourceRegistry;
+use Nivoli\AddonExpert\Service\GitHubReleaseChecker;
+use Nivoli\AddonExpert\Service\ReleaseInstaller;
+use Nivoli\AddonExpert\Service\UpdateSourceRegistry;
 
 class Releases extends AbstractRoute
 {

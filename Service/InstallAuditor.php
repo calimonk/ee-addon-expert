@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\Service;
+namespace Nivoli\AddonExpert\Service;
 
 /**
  * Append-only audit log of every install / refresh / trust event.

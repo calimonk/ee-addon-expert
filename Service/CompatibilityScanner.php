@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\Service;
+namespace Nivoli\AddonExpert\Service;
 
 /**
  * Heuristic static scan for version-gated PHP syntax / functions.

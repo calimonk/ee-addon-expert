@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\Service;
+namespace Nivoli\AddonExpert\Service;
 
 use RuntimeException;
 

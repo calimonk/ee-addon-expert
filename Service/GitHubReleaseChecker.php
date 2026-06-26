@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\Service;
+namespace Nivoli\AddonExpert\Service;
 
 /**
  * Fetches the latest release for a GitHub repo and caches it on disk.

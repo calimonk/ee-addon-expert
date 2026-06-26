@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\ControlPanel\Routes;
+namespace Nivoli\AddonExpert\ControlPanel\Routes;
 
 use ExpressionEngine\Service\Addon\Controllers\Mcp\AbstractRoute;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Codebit\AddonExpert\ControlPanel\Routes;
+namespace Nivoli\AddonExpert\ControlPanel\Routes;
 
 trait LoadsStyle
 {
