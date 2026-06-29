@@ -124,13 +124,10 @@ $row = function (array $p) use ($h, $csrf) {
             <span class="button button--default addi-icon-button addi-button-disabled" title="No settings" aria-disabled="true"><i class="fal fa-cog" aria-hidden="true"></i></span>
           <?php endif; ?>
 
-          <?php if ($installed && ! empty($p['remove_url'])): ?>
-            <form class="addi-inline-form" method="post" action="<?= $h($p['remove_url']) ?>" onsubmit="return confirm('Uninstall <?= $h($name) ?>?');">
-              <?= $csrf() ?>
-              <button class="button addi-icon-button addi-icon-danger" type="submit" title="Uninstall <?= $h($name) ?>" aria-label="Uninstall <?= $h($name) ?>">
-                <i class="fal fa-trash-alt" aria-hidden="true"></i>
-              </button>
-            </form>
+          <?php if ($installed && ! empty($p['remove_check_url'])): ?>
+            <a class="button addi-icon-button addi-icon-danger" href="<?= $h($p['remove_check_url']) ?>" title="Remove <?= $h($name) ?> (checks for usage first)" aria-label="Remove <?= $h($name) ?>">
+              <i class="fal fa-trash-alt" aria-hidden="true"></i>
+            </a>
           <?php endif; ?>
         </div>
       </td>

@@ -274,6 +274,11 @@ class PackageInstaller
                 'remove_url' => $isInstalled
                     ? ee('CP/URL')->make('addons/remove/' . $shortName, ['return' => $returnUrl])->compile()
                     : '',
+                // Pre-removal safety check (usage scan) — the Packages "remove"
+                // action routes here before EE's native uninstall.
+                'remove_check_url' => $isInstalled
+                    ? ee('CP/URL')->make('addons/settings/addon_expert/remove-check', ['short' => $shortName])->compile()
+                    : '',
                 'download_url' => ee('CP/URL')->make('addons/settings/addon_expert/packages', [
                     'download' => $shortName,
                 ])->compile(),

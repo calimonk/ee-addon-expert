@@ -12,11 +12,12 @@ use Nivoli\AddonExpert\Service\ReleaseInstaller;
 use Nivoli\AddonExpert\Service\SettingsStore;
 use Nivoli\AddonExpert\Service\TrustStore;
 use Nivoli\AddonExpert\Service\UpdateSourceRegistry;
+use Nivoli\AddonExpert\Service\UsageScanner;
 
 return [
     'name'              => 'Addon Expert',
     'description'       => 'Install, update, and track ExpressionEngine add-ons — ZIP uploads, GitHub releases, one-click updates, supply-chain checks. Based on Addon Manager + by Javid Fazaeli (MIT).',
-    'version'           => '2.6.0',
+    'version'           => '2.7.0',
     'author'            => 'Codebit',
     'author_url'        => 'https://codebit.nl',
     'namespace'         => 'Nivoli\AddonExpert',
@@ -76,6 +77,12 @@ return [
         },
         'CompatibilityScanner' => function($addon) {
             return ee('addon_expert:compatibilityScanner');
+        },
+        'usageScanner' => function($addon) {
+            return new UsageScanner();
+        },
+        'UsageScanner' => function($addon) {
+            return ee('addon_expert:usageScanner');
         },
         'autoFinalizer' => function($addon) {
             return new AutoFinalizer(

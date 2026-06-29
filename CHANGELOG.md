@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-06-29
+
+### Added
+- **Safe removal — pre-uninstall usage check.** The Packages "remove" action
+  now routes through a check that scans (best-effort) for where the add-on is
+  used and shows what removing it might break, before handing off to EE's
+  native uninstall:
+  - its template tags `{exp:<short>:…}` in templates (layout templates
+    included) and snippets,
+  - channel fields whose fieldtype is the add-on,
+  - extension hooks it registers (informational — removed with the add-on).
+  If nothing is found it reports "safe to remove"; otherwise it lists the
+  references with a "Remove anyway" confirmation. Heuristic — it can't see
+  tags built dynamically or PHP that calls the add-on.
+
 ## [2.6.0] - 2026-06-29
 
 ### Added
