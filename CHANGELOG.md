@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-06-29
+
+### Added
+- **Changelog modal on the Releases screen.** The per-row "changelog" link now
+  opens a modal with the latest release's notes inline — rendered from the
+  release notes already cached for *any* tracked add-on (GitHub release body or
+  registry notes), so it's not limited to first-party products — plus a
+  "Full changelog ↗" link to the complete history. With JS off, the link still
+  navigates straight to the full changelog.
+
+### Fixed
+- **Uninstalls are now recorded in the Audit Log.** Removing an add-on through
+  Addon Expert logs an `uninstall` (REMOVED) event before handing off to EE's
+  native uninstall. (Removals done via EE's own Add-Ons screen still aren't
+  captured — EE provides no hook for it.)
+
 ## [2.7.1] - 2026-06-29
 
 ### Changed

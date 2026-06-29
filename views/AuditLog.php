@@ -8,6 +8,7 @@ $eventBadge = function (string $event) {
         case 'install_ok':                return ['background:#16a34a;color:#fff', 'OK'];
         case 'install_failed':            return ['background:#dc2626;color:#fff', 'FAIL'];
         case 'install_blocked':           return ['background:#7c2d12;color:#fff', 'BLOCKED'];
+        case 'uninstall':                 return ['background:#b91c1c;color:#fff', 'REMOVED'];
         case 'trust_pinned':              return ['background:#0ea5e9;color:#fff', 'PINNED'];
         case 'trust_reconfirmed_manual':  return ['background:#0284c7;color:#fff', 'RECONFIRM'];
         default:                          return ['background:#64748b;color:#fff', strtoupper($event)];

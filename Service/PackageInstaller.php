@@ -256,6 +256,7 @@ class PackageInstaller
                 'remote_registry_url' => $remote['registry_url'] ?? null,
                 'remote_registry_product' => $remote['registry_product'] ?? null,
                 'remote_key_present' => ! empty($remote['key_present']),
+                'remote_notes' => (string) ($remote['notes'] ?? ''),
                 // POST target for the one-click "Update" button. Empty when
                 // no source (GitHub repo or registry) is configured.
                 'remote_install_url' => ($remote['repo'] !== null || ($remote['kind'] ?? null) === 'registry')
@@ -329,6 +330,9 @@ class PackageInstaller
             'registry_url' => null,
             'registry_product' => null,
             'key_present' => false,
+            // Latest release notes (GitHub body / registry notes) for the
+            // changelog modal — empty until a fresh release is cached.
+            'notes' => '',
         ];
 
         $mapping = $this->sources()->resolve($shortName);
@@ -393,6 +397,7 @@ class PackageInstaller
             'release_url' => (string) ($cached['html_url'] ?? ''),
             'release_name' => (string) ($cached['name'] ?? ''),
             'published_at' => (string) ($cached['published_at'] ?? ''),
+            'notes' => (string) ($cached['body'] ?? ''),
             'checked_at' => $checkedAt,
             'update_available' => $isNewer,
             'status' => $checker->isStale($repo) ? 'stale' : 'fresh',
@@ -450,6 +455,7 @@ class PackageInstaller
             'release_url'      => '',
             'release_name'     => '',
             'published_at'     => '',
+            'notes'            => (string) ($cached['notes'] ?? ''),
             'checked_at'       => $checkedAt,
             'update_available' => $isNewer,
             'status'           => $checker->isStale($url, $product) ? 'stale' : 'fresh',

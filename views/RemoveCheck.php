@@ -11,6 +11,24 @@ $kinds = [
     ['key' => 'extensions', 'label' => 'Extension hooks', 'risk' => false],
 ];
 ?>
+<?php if (! empty($handoff)): ?>
+<div class="addi-wrap">
+  <section class="addi-card">
+    <h2>Removing <?= $h($name) ?>…</h2>
+    <p class="addi-muted" style="font-size:13px">Recorded in the audit log. Handing off to ExpressionEngine to uninstall — if it doesn't proceed automatically, use the button below.</p>
+    <form id="ae-remove-handoff" method="post" action="<?= $h($remove_url) ?>" style="display:inline-flex;gap:10px;align-items:center">
+      <?php if ($csrfToken !== ''): ?>
+        <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
+        <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
+      <?php endif; ?>
+      <button type="submit" class="button addi-button-danger"><i class="fal fa-trash-alt" aria-hidden="true"></i> Uninstall <?= $h($name) ?></button>
+      <a class="button button--default" href="<?= $h($cancel_url) ?>">Cancel</a>
+    </form>
+    <script>(function(){var f=document.getElementById('ae-remove-handoff');if(f){setTimeout(function(){f.submit();},120);}})();</script>
+  </section>
+</div>
+<?php return; ?>
+<?php endif; ?>
 <div class="addi-wrap">
   <p class="addi-toolbar">
     <a class="button button--default" href="<?= $h($cancel_url) ?>">Packages</a>
@@ -65,12 +83,14 @@ $kinds = [
       </table>
     </div>
 
-    <form method="post" action="<?= $h($remove_url) ?>" style="display:inline-flex;gap:10px;align-items:center"
+    <form method="post" action="<?= $h($confirm_url) ?>" style="display:inline-flex;gap:10px;align-items:center"
           onsubmit="return confirm('Permanently uninstall <?= $h($name) ?>? This runs EE's native uninstall.');">
       <?php if ($csrfToken !== ''): ?>
         <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
         <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
       <?php endif; ?>
+      <input type="hidden" name="confirm_remove" value="1">
+      <input type="hidden" name="short_name" value="<?= $h($short) ?>">
       <button type="submit" class="button addi-button-danger">
         <i class="fal fa-trash-alt" aria-hidden="true"></i>
         Remove <?= $h($name) ?><?= $hasUsage ? ' anyway' : '' ?>

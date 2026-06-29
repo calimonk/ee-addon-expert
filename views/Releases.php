@@ -13,6 +13,39 @@ $fmtAge = function (int $ts): string {
     if ($delta < 86400) return floor($delta / 3600) . 'h ago';
     return floor($delta / 86400) . 'd ago';
 };
+
+// Small, safe markdown -> HTML for release notes in the changelog modal:
+// escape first, then a few block/inline rules.
+$mdToHtml = function (string $md) use ($h) {
+    $inline = function ($s) use ($h) {
+        $s = $h($s);
+        $s = preg_replace('/`([^`]+)`/', '<code>$1</code>', $s);
+        $s = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $s);
+        $s = preg_replace_callback('/\[([^\]]+)\]\(([^)\s]+)\)/', function ($m) {
+            return '<a href="' . str_replace('"', '%22', $m[2]) . '" target="_blank" rel="noopener">' . $m[1] . '</a>';
+        }, $s);
+        return $s;
+    };
+    $html = '';
+    $inList = false;
+    foreach (preg_split('/\r?\n/', $md) as $raw) {
+        $line = rtrim((string) $raw);
+        if (preg_match('/^#{1,}\s+(.+)/', $line, $m)) {
+            if ($inList) { $html .= '</ul>'; $inList = false; }
+            $html .= '<h4 style="margin:12px 0 4px;font-size:13px">' . $inline($m[1]) . '</h4>';
+        } elseif (preg_match('/^[-*]\s+(.+)/', $line, $m)) {
+            if (! $inList) { $html .= '<ul style="margin:4px 0 8px;padding-left:18px">'; $inList = true; }
+            $html .= '<li>' . $inline($m[1]) . '</li>';
+        } elseif (trim($line) === '') {
+            if ($inList) { $html .= '</ul>'; $inList = false; }
+        } else {
+            if ($inList) { $html .= '</ul>'; $inList = false; }
+            $html .= '<p style="margin:4px 0">' . $inline($line) . '</p>';
+        }
+    }
+    if ($inList) { $html .= '</ul>'; }
+    return $html;
+};
 ?>
 <div class="addi-wrap">
   <p class="addi-toolbar">
@@ -167,18 +200,28 @@ $fmtAge = function (int $ts): string {
                   <span style="color:#94a3b8">—</span>
                 <?php endif; ?>
                 <?php
-                  // Changelog link: registry products → the live worker changelog;
-                  // GitHub sources → the repo's releases page.
+                  // Full-changelog link: registry products → the live worker
+                  // changelog; GitHub sources → the repo's releases page.
                   $clUrl = '';
                   if ($isRegistry && $regProduct !== '' && $regUrl !== '') {
                     $clUrl = parse_url($regUrl, PHP_URL_SCHEME) . '://' . parse_url($regUrl, PHP_URL_HOST) . '/changelog/' . $regProduct;
                   } elseif ($remoteRepo !== '') {
                     $clUrl = 'https://github.com/' . $remoteRepo . '/releases';
                   }
+                  $notes = (string) ($pkg['remote_notes'] ?? '');
                 ?>
-                <?php if ($clUrl !== ''): ?>
+                <?php if ($notes !== ''): ?>
                   <div style="margin-top:3px">
-                    <a href="<?= $h($clUrl) ?>" target="_blank" rel="noopener" style="font-size:11px;color:#5b21b6;text-decoration:none" title="View release notes / changelog">
+                    <a href="<?= $h($clUrl !== '' ? $clUrl : '#') ?>" target="_blank" rel="noopener"
+                       onclick="aeCl('<?= $h($short) ?>');return false;"
+                       style="font-size:11px;color:#5b21b6;text-decoration:none" title="What changed in the latest release">
+                      <i class="fal fa-file-alt" aria-hidden="true"></i> changelog
+                    </a>
+                  </div>
+                  <div class="ae-cl-data" id="aecl-<?= $h($short) ?>" data-name="<?= $h($name) ?>" data-full="<?= $h($clUrl) ?>" style="display:none"><?= $mdToHtml($notes) ?></div>
+                <?php elseif ($clUrl !== ''): ?>
+                  <div style="margin-top:3px">
+                    <a href="<?= $h($clUrl) ?>" target="_blank" rel="noopener" style="font-size:11px;color:#5b21b6;text-decoration:none" title="View changelog">
                       <i class="fal fa-file-alt" aria-hidden="true"></i> changelog ↗
                     </a>
                   </div>
@@ -288,4 +331,26 @@ $fmtAge = function (int $ts): string {
         </p>
     <?php endif; ?>
   </section>
+
+  <div id="ae-cl-ov" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9998" onclick="aeClClose()"></div>
+  <div id="ae-cl-box" role="dialog" aria-modal="true" style="display:none;position:fixed;z-index:9999;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,92vw);max-height:80vh;overflow:auto;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 12px 40px rgba(15,23,42,.25);padding:20px 24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px">
+      <h3 id="ae-cl-title" style="margin:0;font-size:16px;color:#1e293b"></h3>
+      <button type="button" onclick="aeClClose()" aria-label="Close" style="border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:#64748b">&times;</button>
+    </div>
+    <div id="ae-cl-body" style="font-size:13.5px;line-height:1.55;color:#334155"></div>
+    <p id="ae-cl-fullwrap" style="margin:14px 0 0;border-top:1px solid #f1f5f9;padding-top:12px">
+      <a id="ae-cl-full" href="#" target="_blank" rel="noopener" style="font-size:12.5px;color:#5b21b6">Full changelog ↗</a>
+    </p>
+  </div>
+  <script>
+  function aeCl(s){var d=document.getElementById('aecl-'+s);if(!d){return;}
+    document.getElementById('ae-cl-title').textContent=(d.getAttribute('data-name')||'')+' — latest release';
+    document.getElementById('ae-cl-body').innerHTML=d.innerHTML;
+    var full=d.getAttribute('data-full')||'';var fw=document.getElementById('ae-cl-fullwrap');
+    if(full){document.getElementById('ae-cl-full').href=full;fw.style.display='';}else{fw.style.display='none';}
+    document.getElementById('ae-cl-ov').style.display='block';document.getElementById('ae-cl-box').style.display='block';}
+  function aeClClose(){document.getElementById('ae-cl-ov').style.display='none';document.getElementById('ae-cl-box').style.display='none';}
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){aeClClose();}});
+  </script>
 </div>
