@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [2.4.0] - 2026-06-29
+## [2.4.1] - 2026-06-29
+
+### Fixed
+- **Auto-finalize no longer fails on module-only add-ons.** The extension
+  step called `class_exists()` on a conventional extension class name even
+  for add-ons that ship no `ext.<short>.php`; that triggers EE's autoloader
+  into a bare `require` of the missing file and fatals (e.g. `content_toc`).
+  The extension block is now guarded by an `is_file()` check on the actual
+  ext file before the class is touched. The add-on's files and module
+  version still finalize correctly; only the spurious extension step is
+  skipped.
 
 ### Added
 - **Update Sources screen.** A dedicated screen to choose, per installed

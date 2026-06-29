@@ -16,7 +16,7 @@ use Nivoli\AddonExpert\Service\UpdateSourceRegistry;
 return [
     'name'              => 'Addon Expert',
     'description'       => 'Install, update, and track ExpressionEngine add-ons — ZIP uploads, GitHub releases, one-click updates, supply-chain checks. Based on Addon Manager + by Javid Fazaeli (MIT).',
-    'version'           => '2.4.0',
+    'version'           => '2.4.1',
     'author'            => 'Codebit',
     'author_url'        => 'https://codebit.nl',
     'namespace'         => 'Nivoli\AddonExpert',

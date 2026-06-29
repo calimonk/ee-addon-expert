@@ -245,8 +245,21 @@ class AutoFinalizer
         }
 
         // === EXTENSION ===
+        // Guard on the ext FILE existing before calling class_exists(): a
+        // module-only add-on (e.g. content_toc) still reports a conventional
+        // extension class name, and class_exists() on it triggers EE's
+        // autoloader, which bare-require()s `ext.<short>.php` and fatals when
+        // the file isn't there. is_file() short-circuits that. We resolve the
+        // path from the installed module row when available, else the EE
+        // addon info, else the detected addons dir.
         $extClass = (string) $addonInfo->getExtensionClass();
-        if ($extClass !== '' && class_exists($extClass)) {
+        $extDir = isset($modRow['path'])
+            ? (string) $modRow['path']
+            : (method_exists($addonInfo, 'getPath')
+                ? (string) $addonInfo->getPath()
+                : PackageInstaller::detectAddonsPath() . DIRECTORY_SEPARATOR . $shortName);
+        $extFile = rtrim($extDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'ext.' . $shortName . '.php';
+        if ($extClass !== '' && is_file($extFile) && class_exists($extClass)) {
             $extensions = ee('Model')->get('Extension')
                 ->filter('class', $extClass)
                 ->all();
