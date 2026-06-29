@@ -175,6 +175,95 @@ class CompatibilityScanner
         return $this->scanFiles($files, $targetPhp);
     }
 
+    /**
+     * Best-effort estimate of how likely a detected add-on is to run on the
+     * current EE (7.x). Fact-first: the declared EE requirement and whether
+     * the package is namespaced (the EE6/7-era structure) are read straight
+     * from the manifest; only a small, high-signal legacy scan touches source
+     * (accessory files, removed in EE3; and the EE2 `$plugin_info` array).
+     * Same caveat as the PHP scan — heuristic, can't see everything.
+     *
+     * @param string $dir  the add-on directory
+     * @param array  $meta parsed addon.setup.php metadata
+     * @return array{verdict:string,label:string,requires_ee:string,signals:array<int,array{0:string,1:string}>}
+     *   verdict ∈ {good, review, legacy}; signals are [tone, text], tone ∈ {ok, warn, bad}.
+     */
+    public function assessEe7(string $dir, array $meta): array
+    {
+        $dir = rtrim($dir, DIRECTORY_SEPARATOR);
+
+        $requiresEe = trim((string) ($meta['requires']['ee'] ?? ''));
+        $eeMajor = ($requiresEe !== '' && preg_match('/(\d+)/', $requiresEe, $m)) ? (int) $m[1] : null;
+        $namespaced = ! empty($meta['namespace']);
+
+        $signals = [];
+        $legacy = false;
+
+        if ($eeMajor !== null) {
+            if ($eeMajor >= 7) {
+                $signals[] = ['ok', 'Targets EE ' . $requiresEe];
+            } elseif ($eeMajor === 6) {
+                $signals[] = ['ok', 'Targets EE ' . $requiresEe . ' (usually 7-compatible)'];
+            } elseif ($eeMajor < 3) {
+                $signals[] = ['bad', 'Targets EE ' . $requiresEe . ' (EE2-era)'];
+                $legacy = true;
+            } else {
+                $signals[] = ['warn', 'Targets EE ' . $requiresEe . ' (pre-7)'];
+            }
+        } else {
+            $signals[] = ['warn', 'No EE version declared'];
+        }
+
+        $signals[] = $namespaced
+            ? ['ok', 'Namespaced (EE6/7 structure)']
+            : ['warn', 'Not namespaced (older structure)'];
+
+        // Accessories were removed in EE3 — a hard legacy marker.
+        if (! empty(glob($dir . DIRECTORY_SEPARATOR . 'acc.*.php'))) {
+            $signals[] = ['bad', 'Accessory file present (removed in EE3)'];
+            $legacy = true;
+        }
+
+        // Scan only the conventional top-level component files (cheap, and
+        // where EE2-port smells live) for the EE2 `$plugin_info` array.
+        $scan = [];
+        foreach (['pi', 'mod', 'mcp', 'ext', 'upd'] as $kind) {
+            foreach (glob($dir . DIRECTORY_SEPARATOR . $kind . '.*.php') ?: [] as $f) {
+                $scan[] = $f;
+            }
+        }
+        foreach (array_slice($scan, 0, 12) as $f) {
+            $src = @file_get_contents($f, false, null, 0, self::MAX_FILE_BYTES);
+            if ($src === false || $src === '') {
+                continue;
+            }
+            if (preg_match('/\$plugin_info\s*=/', $this->stripComments($src))) {
+                $signals[] = ['bad', 'EE2-style $plugin_info array'];
+                $legacy = true;
+                break;
+            }
+        }
+
+        if ($legacy) {
+            $verdict = 'legacy';
+            $label = 'Legacy (pre-EE7)';
+        } elseif (($eeMajor !== null && $eeMajor >= 7)
+            || ($namespaced && ($eeMajor === null || $eeMajor >= 6))) {
+            $verdict = 'good';
+            $label = 'EE7 ready';
+        } else {
+            $verdict = 'review';
+            $label = 'Review for EE7';
+        }
+
+        return [
+            'verdict'     => $verdict,
+            'label'       => $label,
+            'requires_ee' => $requiresEe,
+            'signals'     => $signals,
+        ];
+    }
+
     private function buildSummary(string $verdict, string $target, int $scanned, array $above, ?string $maxRequired): string
     {
         $targetShort = $this->shortVersion($target);

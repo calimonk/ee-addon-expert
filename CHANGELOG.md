@@ -6,7 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [2.4.2] - 2026-06-29
+## [2.5.0] - 2026-06-29
+
+### Added
+- **EE7 compatibility hint on the Packages screen.** Each detected add-on
+  shows a best-effort "EE7 fit" badge — **EE7 ready** / **Review for EE7** /
+  **Legacy (pre-EE7)** — derived fact-first from the declared `requires.ee`
+  and whether the package is namespaced (the EE6/7-era structure), plus a
+  small high-signal legacy scan (accessory files, removed in EE3; and the
+  EE2 `$plugin_info` array). Hover the badge for the underlying signals.
+  Heuristic — same "verify before relying on it" caveat as the force-install
+  feature scan.
+
+### Changed
+- **Packages screen segmented into three groups** — *Available to install*,
+  *Available to update*, and *Installed* — each shown only when non-empty,
+  for a clearer at-a-glance overview.
 
 ### Changed
 - **Packages screen redesigned for scannability.** Replaced the bulky

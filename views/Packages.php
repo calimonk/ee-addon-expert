@@ -3,15 +3,19 @@ $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $packages = $packages ?? [];
 $csrfToken = $csrf_token ?? '';
 
-// Segment installed vs not-installed (the incoming list is already sorted
-// by installed-then-name; this just groups it).
+// Segment into: available to install, available to update, installed (current).
+$toInstall = [];
+$toUpdate  = [];
 $installed = [];
-$available = [];
 foreach ($packages as $p) {
-    if (! empty($p['is_installed'])) {
-        $installed[] = $p;
+    $isInstalled = ! empty($p['is_installed']);
+    $hasUpdate   = ! empty($p['remote_update_available']) || ! empty($p['update_available']);
+    if (! $isInstalled) {
+        $toInstall[] = $p;
+    } elseif ($hasUpdate) {
+        $toUpdate[] = $p;
     } else {
-        $available[] = $p;
+        $installed[] = $p;
     }
 }
 
@@ -57,6 +61,13 @@ $row = function (array $p) use ($h, $csrf) {
           <span class="addi-pkg-flag is-warn" title="Requirements overridden at install<?= ! empty($origStr) ? ' (declared ' . $h(implode(', ', $origStr)) . ')' : '' ?>">⚠ requirement override</span>
         <?php elseif (! empty($compat)): ?>
           <span class="addi-pkg-flag is-bad" title="<?= $h(implode(' ', $compat)) ?>">⚠ incompatible</span>
+        <?php endif; ?>
+        <?php if (! empty($p['ee7'])):
+          $ee7 = $p['ee7'];
+          $ee7cls = $ee7['verdict'] === 'good' ? 'is-ok' : ($ee7['verdict'] === 'legacy' ? 'is-bad' : 'is-warn');
+          $ee7tip = implode(' · ', array_map(fn($s) => (string) ($s[1] ?? ''), (array) ($ee7['signals'] ?? [])));
+        ?>
+          <span class="addi-pkg-flag <?= $ee7cls ?>" title="EE7 fit (best-effort) — <?= $h($ee7tip) ?>"><?= $h($ee7['label'] ?? '') ?></span>
         <?php endif; ?>
       </td>
       <td class="addi-pkg-ver">
@@ -128,29 +139,28 @@ $row = function (array $p) use ($h, $csrf) {
     return ob_get_clean();
 };
 
-$section = function (string $title, array $rows, string $emptyMsg) use ($h, $row) {
+$section = function (string $title, array $rows) use ($h, $row) {
+    if (empty($rows)) {
+        return;
+    }
     ?>
     <div class="addi-pkg-section">
       <h3><?= $h($title) ?> <span class="addi-pkg-count"><?= count($rows) ?></span></h3>
-      <?php if (empty($rows)): ?>
-        <p class="addi-muted" style="font-size:13px;margin:6px 0 0"><?= $h($emptyMsg) ?></p>
-      <?php else: ?>
-        <div class="addi-pkg-tablewrap">
-          <table class="addi-pkg-table">
-            <thead>
-              <tr>
-                <th>Add-on</th>
-                <th>Version</th>
-                <th>Author</th>
-                <th class="addi-pkg-actions-head">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($rows as $p) { echo $row($p); } ?>
-            </tbody>
-          </table>
-        </div>
-      <?php endif; ?>
+      <div class="addi-pkg-tablewrap">
+        <table class="addi-pkg-table">
+          <thead>
+            <tr>
+              <th>Add-on</th>
+              <th>Version</th>
+              <th>Author</th>
+              <th class="addi-pkg-actions-head">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($rows as $p) { echo $row($p); } ?>
+          </tbody>
+        </table>
+      </div>
     </div>
     <?php
 };
@@ -170,8 +180,9 @@ $section = function (string $title, array $rows, string $emptyMsg) use ($h, $row
       <p class="addi-muted">No add-on packages with an <code>addon.setup.php</code> file were found.</p>
     <?php else: ?>
       <?php
-        $section('Installed', $installed, 'No add-ons are installed yet.');
-        $section('Available', $available, 'Every detected add-on is installed.');
+        $section('Available to install', $toInstall);
+        $section('Available to update', $toUpdate);
+        $section('Installed', $installed);
       ?>
     <?php endif; ?>
   </section>

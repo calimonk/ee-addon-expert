@@ -221,6 +221,7 @@ class PackageInstaller
             // For a not-yet-installed package this tells the admin up
             // front whether clicking EE's native Install will be refused.
             $compatIssues = self::checkRequirements((array) ($meta['requires'] ?? []));
+            $ee7 = $this->scanner()->assessEe7($path, $meta);
             $override = $this->overrides()->get($shortName);
 
             $packages[] = [
@@ -234,6 +235,7 @@ class PackageInstaller
                 'update_available' => $updateAvailable,
                 'settings_available' => $settingsAvailable,
                 'compat_issues' => $compatIssues,
+                'ee7' => $ee7,
                 'is_overridden' => $override !== null,
                 'override_info' => $override,
                 'remote_repo' => $remote['repo'],

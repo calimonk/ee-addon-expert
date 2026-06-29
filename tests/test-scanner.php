@@ -49,4 +49,39 @@ section('summary text');
 
 check('clear summary mentions "appears safe"', stripos($s->scanFiles(['x.php' => '<?php echo 1;'], '8.2')['summary'], 'appears safe') !== false);
 
+section('EE7 fit assessment');
+
+$ee7dir = function (array $files = []) {
+    $d = SYSPATH . 'user/addons/ee7_' . bin2hex(random_bytes(4));
+    @mkdir($d, 0775, true);
+    foreach ($files as $name => $contents) {
+        file_put_contents($d . '/' . $name, $contents);
+    }
+    return $d;
+};
+
+$r = $s->assessEe7($ee7dir(), ['namespace' => 'Vendor\\X', 'requires' => ['ee' => '7.0.0']]);
+check('targets EE7 + namespaced → good', $r['verdict'] === 'good' && $r['requires_ee'] === '7.0.0');
+
+$r = $s->assessEe7($ee7dir(), ['namespace' => 'Vendor\\X']);
+check('namespaced, no EE requirement → good', $r['verdict'] === 'good');
+
+$r = $s->assessEe7($ee7dir(), []);
+check('no namespace + no requirement → review', $r['verdict'] === 'review');
+
+$r = $s->assessEe7($ee7dir(), ['namespace' => 'Vendor\\X', 'requires' => ['ee' => '4.3.0']]);
+check('targets pre-7 (EE4) → review', $r['verdict'] === 'review');
+
+$r = $s->assessEe7($ee7dir(), ['requires' => ['ee' => '2.8.0']]);
+check('targets EE2 → legacy', $r['verdict'] === 'legacy');
+
+$r = $s->assessEe7($ee7dir(['acc.foo.php' => '<?php class Foo_acc {}']), ['namespace' => 'V\\X', 'requires' => ['ee' => '7.0']]);
+check('accessory file → legacy (overrides positive signals)', $r['verdict'] === 'legacy');
+
+$r = $s->assessEe7($ee7dir(['pi.foo.php' => '<?php $plugin_info = array("pi_name" => "Foo");']), ['namespace' => 'V\\X']);
+check('EE2 $plugin_info array → legacy', $r['verdict'] === 'legacy');
+
+$r = $s->assessEe7($ee7dir(['mod.foo.php' => '<?php // clean modern module']), ['namespace' => 'V\\X', 'requires' => ['ee' => '7.0']]);
+check('clean component files do not trip legacy', $r['verdict'] === 'good');
+
 done();
