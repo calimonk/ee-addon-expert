@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-29
+
+### Added
+- **License-gated registry update source.** Private/paid add-ons can declare
+  a `registry` source — `'registry' => ['url' => '…', 'product' => '…']` — and
+  Addon Expert tracks and installs them like GitHub releases, through a vendor
+  endpoint that validates a license key and returns a signed, sha256-verified
+  download. The site holds only the key; the vendor holds the GitHub token.
+- **Registry license keys** (Settings): one key per vendor host,
+  auto-discovered from installed manifests. `config.php` / env values override
+  the UI-saved ones (`$config['addon_expert_registry_key']`, the per-host
+  `addon_expert_registry_keys` array, or the `ADDON_EXPERT_REGISTRY_KEY`
+  environment variable). Stored in
+  `system/user/config/addon_expert_registry_keys.json`.
+- **Integrity gate:** a registry download's sha256 is verified against the
+  manifest before the atomic swap — the registry equivalent of the GitHub
+  trust-on-first-use check. A mismatch hard-blocks the install and is
+  audit-logged.
+
+### Changed
+- Releases screen now lists registry-sourced add-ons alongside GitHub ones,
+  with a `license-gated` badge and the same one-click install; a missing key
+  links to Settings. The "Source" column and copy were generalised from
+  GitHub-only.
+
 ## [2.2.0] - 2026-06-26
 
 ### Changed
