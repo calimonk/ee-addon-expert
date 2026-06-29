@@ -153,5 +153,5 @@ admin sets it on the Releases screen.
    sha256-verified download + license-key storage + Settings field.
 3. Docs + the codebit.nl "partners, contact us" note.
 
-Target: a 2.2.0 / 2.3.0 line for the Addon Expert side once the worker
-route exists.
+Target: a 2.3.0+ line for the Addon Expert side once the worker route
+exists (2.2.0 is the `Nivoli\*` namespace release).
