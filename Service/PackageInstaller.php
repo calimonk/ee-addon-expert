@@ -290,6 +290,12 @@ class PackageInstaller
         if ($mapping === null) {
             return $empty;
         }
+        // This method resolves GitHub remote state only. A `registry:`
+        // source is handled by its own checker/UI — treat it as no GitHub
+        // mapping here so the GitHub Releases surface stays stable.
+        if (($mapping['type'] ?? 'github') !== 'github') {
+            return $empty;
+        }
 
         $repo = $mapping['repo'];
         $checker = $this->releases();
@@ -369,7 +375,7 @@ class PackageInstaller
 
             $shortName = basename($path);
             $mapping = $sources->resolve($shortName);
-            if ($mapping === null) {
+            if ($mapping === null || ($mapping['type'] ?? 'github') !== 'github') {
                 continue;
             }
 

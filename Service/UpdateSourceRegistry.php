@@ -50,21 +50,36 @@ class UpdateSourceRegistry
     }
 
     /**
-     * Resolve $shortName to a repo + source label. Returns null when no
-     * mapping exists in either layer.
+     * Resolve $shortName to an update source. Returns null when no mapping
+     * exists in either layer. The `type` discriminator is either:
+     *   - 'github'   → also carries `repo`   (owner/repo)
+     *   - 'registry' → also carries `url` + `product`
      *
-     * @return array{repo:string,source:string}|null
+     * GitHub results keep `repo` for backward compatibility; consumers that
+     * only handle GitHub should check `type` and skip non-github sources.
+     *
+     * @return array{type:string,source:string,repo?:string,url?:string,product?:string}|null
      */
     public function resolve(string $shortName): ?array
     {
         $manifestRepo = $this->repoFromManifest($shortName);
         if ($manifestRepo !== null) {
-            return ['repo' => $manifestRepo, 'source' => self::SOURCE_MANIFEST];
+            return ['type' => 'github', 'repo' => $manifestRepo, 'source' => self::SOURCE_MANIFEST];
+        }
+
+        $manifestRegistry = $this->registryFromManifest($shortName);
+        if ($manifestRegistry !== null) {
+            return [
+                'type'    => 'registry',
+                'url'     => $manifestRegistry['url'],
+                'product' => $manifestRegistry['product'],
+                'source'  => self::SOURCE_MANIFEST,
+            ];
         }
 
         $adminRepo = $this->adminMap()[$shortName] ?? null;
         if (is_string($adminRepo) && $adminRepo !== '') {
-            return ['repo' => $adminRepo, 'source' => self::SOURCE_ADMIN];
+            return ['type' => 'github', 'repo' => $adminRepo, 'source' => self::SOURCE_ADMIN];
         }
 
         return null;
@@ -147,6 +162,37 @@ class UpdateSourceRegistry
         }
 
         return null;
+    }
+
+    /**
+     * Registry source declared in the add-on's setup.php, or null:
+     *
+     *   'registry' => ['url' => 'https://vendor/releases', 'product' => 'slug'],
+     *
+     * The product slug is normalized to [a-z0-9_]; the URL must be https.
+     *
+     * @return array{url:string,product:string}|null
+     */
+    public function registryFromManifest(string $shortName): ?array
+    {
+        $setup = $this->addonsPath . $shortName . DIRECTORY_SEPARATOR . 'addon.setup.php';
+        if (! is_file($setup)) {
+            return null;
+        }
+        try {
+            $meta = include $setup;
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (! is_array($meta) || empty($meta['registry']) || ! is_array($meta['registry'])) {
+            return null;
+        }
+        $url = trim((string) ($meta['registry']['url'] ?? ''));
+        $product = preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($meta['registry']['product'] ?? '')));
+        if (! RegistryReleaseChecker::isValidEndpoint($url) || $product === '') {
+            return null;
+        }
+        return ['url' => $url, 'product' => $product];
     }
 
     private function adminMap(): array

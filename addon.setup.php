@@ -6,6 +6,7 @@ use Nivoli\AddonExpert\Service\GitHubReleaseChecker;
 use Nivoli\AddonExpert\Service\InstallAuditor;
 use Nivoli\AddonExpert\Service\OverrideStore;
 use Nivoli\AddonExpert\Service\PackageInstaller;
+use Nivoli\AddonExpert\Service\RegistryReleaseChecker;
 use Nivoli\AddonExpert\Service\ReleaseInstaller;
 use Nivoli\AddonExpert\Service\SettingsStore;
 use Nivoli\AddonExpert\Service\TrustStore;
@@ -26,6 +27,12 @@ return [
         },
         'GitHubReleaseChecker' => function($addon) {
             return ee('addon_expert:githubReleaseChecker');
+        },
+        'registryReleaseChecker' => function($addon) {
+            return new RegistryReleaseChecker();
+        },
+        'RegistryReleaseChecker' => function($addon) {
+            return ee('addon_expert:registryReleaseChecker');
         },
         'updateSourceRegistry' => function($addon) {
             return new UpdateSourceRegistry();
