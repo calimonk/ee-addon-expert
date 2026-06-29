@@ -86,6 +86,33 @@ foreach ([
     check($label . ' → null', $c->refresh($endpoint, $product, $key) === null);
 }
 
+section('lastError reason capture');
+
+$n = 0;
+$c = checker(fake_http([[401, json_encode(['ok' => false, 'reason' => 'invalid_key'])]], $n));
+$c->refresh($endpoint, $product, $key);
+check('401 → lastError invalid_key + code', ($c->lastError()['reason'] ?? '') === 'invalid_key' && ($c->lastError()['code'] ?? 0) === 401);
+
+$c = checker(fake_http([[403, json_encode(['ok' => false, 'reason' => 'not_entitled'])]], $n));
+$c->refresh($endpoint, $product, $key);
+check('403 → not_entitled (from body)', ($c->lastError()['reason'] ?? '') === 'not_entitled');
+
+$c = checker(fake_http([[403, json_encode(['ok' => false])]], $n));
+$c->refresh($endpoint, $product, $key);
+check('403 w/o body reason → mapped not_entitled', ($c->lastError()['reason'] ?? '') === 'not_entitled');
+
+$c = checker(fake_http([[404, json_encode(['ok' => false])]], $n));
+$c->refresh($endpoint, $product, $key);
+check('404 → unknown_product', ($c->lastError()['reason'] ?? '') === 'unknown_product');
+
+$c = checker(fake_http([[0, null]], $n));
+$c->refresh($endpoint, $product, $key);
+check('transport failure → unreachable', ($c->lastError()['reason'] ?? '') === 'unreachable');
+
+$c = checker(fake_http([[200, $ok]], $n));
+$c->refresh($endpoint, $product, $key);
+check('success → lastError null', $c->lastError() === null);
+
 section('endpoint validation');
 
 check('https endpoint valid', RegistryReleaseChecker::isValidEndpoint('https://x.y/releases'));

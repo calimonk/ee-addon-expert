@@ -77,11 +77,15 @@ class Releases extends AbstractRoute
             $shortName = preg_match('#^[a-z0-9_]+$#', $shortName) ? $shortName : '';
             $mapping = $shortName !== '' ? $registry->resolve($shortName) : null;
 
-            if ($mapping === null) {
+            // Trust pinning is a GitHub-only concept; registry sources are
+            // gated by the license + signed URL + checksum instead.
+            if ($mapping === null || ($mapping['type'] ?? 'github') !== 'github') {
                 ee('CP/Alert')->makeBanner('addon-installer-trust')
                     ->asIssue()
                     ->withTitle('Reconfirm failed')
-                    ->addToBody('No mapping found for ' . $shortName . '.')
+                    ->addToBody($mapping === null
+                        ? 'No mapping found for ' . $shortName . '.'
+                        : 'Trust reconfirmation only applies to GitHub sources.')
                     ->defer();
                 ee()->functions->redirect($selfUrl);
             }
@@ -144,13 +148,15 @@ class Releases extends AbstractRoute
                 ee('CP/Alert')->makeBanner('addon-installer-release-install')
                     ->asIssue()
                     ->withTitle('Update failed')
-                    ->addToBody('No GitHub source is configured for ' . $shortName . '.')
+                    ->addToBody('No update source is configured for ' . $shortName . '.')
                     ->defer();
                 ee()->functions->redirect($selfUrl);
             }
 
             try {
-                $result = $releaseInstaller->installLatestRelease($shortName, $mapping['repo']);
+                $result = (($mapping['type'] ?? 'github') === 'registry')
+                    ? $releaseInstaller->installLatestFromRegistry($shortName, $mapping['url'], $mapping['product'])
+                    : $releaseInstaller->installLatestRelease($shortName, $mapping['repo']);
 
                 $isSelf = ! empty($result['is_self']);
                 $addonsUrl = ee('CP/URL')->make('addons')->compile();
@@ -261,6 +267,7 @@ class Releases extends AbstractRoute
             'packages_url'     => ee('CP/URL')->make('addons/settings/addon_expert/packages')->compile(),
             'audit_url'        => ee('CP/URL')->make('addons/settings/addon_expert/audit-log')->compile(),
             'docs_url'         => ee('CP/URL')->make('addons/settings/addon_expert/documentation')->compile(),
+            'settings_url'     => ee('CP/URL')->make('addons/settings/addon_expert/settings')->compile(),
             'finalize_results' => $finalizeResults,
         ]);
 
@@ -275,14 +282,47 @@ class Releases extends AbstractRoute
     {
         $packages = $installer->installedPackages();
         $stale = [];
+        $staleRegistry = [];
         foreach ($packages as $pkg) {
+            $kind = $pkg['remote_kind'] ?? null;
+            if ($kind === 'registry') {
+                // Only when a license key is present — no point hitting the
+                // endpoint to be told we're unauthenticated.
+                if (! empty($pkg['remote_key_present'])
+                    && ($pkg['remote_registry_url'] ?? '') !== ''
+                    && ($pkg['remote_registry_product'] ?? '') !== '') {
+                    $staleRegistry[] = $pkg;
+                }
+                continue;
+            }
             $repo = (string) ($pkg['remote_repo'] ?? '');
             if ($repo === '') continue;
             if (! $checker->isStale($repo)) continue;
             $stale[$repo] = true;
         }
-        if (empty($stale)) return;
 
-        $checker->refreshMultiple(array_keys($stale));
+        if (! empty($stale)) {
+            $checker->refreshMultiple(array_keys($stale));
+        }
+
+        if (! empty($staleRegistry)) {
+            $registryChecker = ee('addon_expert:registryReleaseChecker');
+            $keys = ee('addon_expert:registryKeyStore');
+            foreach ($staleRegistry as $pkg) {
+                $url = (string) $pkg['remote_registry_url'];
+                $product = (string) $pkg['remote_registry_product'];
+                if (! $registryChecker->isStale($url, $product)) continue;
+                $key = $keys->keyForUrl($url);
+                if ($key === '') continue;
+                $current = '';
+                try {
+                    $addon = ee('Addon')->get($pkg['short_name']);
+                    $current = $addon ? (string) $addon->getVersion() : '';
+                } catch (\Throwable $e) {
+                    // best-effort
+                }
+                $registryChecker->refresh($url, $product, $key, $current);
+            }
+        }
     }
 }

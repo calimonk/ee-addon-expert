@@ -15,6 +15,8 @@ class PackageInstaller
     private ?InstallAuditor $auditor = null;
     private ?OverrideStore $overrides = null;
     private ?CompatibilityScanner $scanner = null;
+    private ?RegistryReleaseChecker $registry = null;
+    private ?RegistryKeyStore $keys = null;
 
     public function __construct(
         ?string $addonsPath = null,
@@ -23,7 +25,9 @@ class PackageInstaller
         ?AutoFinalizer $finalizer = null,
         ?InstallAuditor $auditor = null,
         ?OverrideStore $overrides = null,
-        ?CompatibilityScanner $scanner = null
+        ?CompatibilityScanner $scanner = null,
+        ?RegistryReleaseChecker $registry = null,
+        ?RegistryKeyStore $keys = null
     ) {
         $this->addonsPath = rtrim($addonsPath ?: self::detectAddonsPath(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->sources = $sources;
@@ -32,6 +36,8 @@ class PackageInstaller
         $this->auditor = $auditor;
         $this->overrides = $overrides;
         $this->scanner = $scanner;
+        $this->registry = $registry;
+        $this->keys = $keys;
     }
 
     private function sources(): UpdateSourceRegistry
@@ -92,6 +98,26 @@ class PackageInstaller
                 : new CompatibilityScanner();
         }
         return $this->scanner;
+    }
+
+    private function registry(): RegistryReleaseChecker
+    {
+        if ($this->registry === null) {
+            $this->registry = function_exists('ee')
+                ? ee('addon_expert:registryReleaseChecker')
+                : new RegistryReleaseChecker();
+        }
+        return $this->registry;
+    }
+
+    private function keys(): RegistryKeyStore
+    {
+        if ($this->keys === null) {
+            $this->keys = function_exists('ee')
+                ? ee('addon_expert:registryKeyStore')
+                : new RegistryKeyStore();
+        }
+        return $this->keys;
     }
 
     /**
@@ -223,9 +249,16 @@ class PackageInstaller
                 'remote_trust_diff' => $remote['trust_diff'] ?? [],
                 'remote_trust_pinned' => $remote['trust_pinned'] ?? null,
                 'remote_trust_observed' => $remote['trust_observed'] ?? null,
-                // POST target for the "Update from GitHub" button. Empty
-                // when no repo is configured for this short_name.
-                'remote_install_url' => $remote['repo'] !== null ? $releasesPostUrl : '',
+                // Registry-source fields (null/false for GitHub sources).
+                'remote_kind' => $remote['kind'] ?? null,
+                'remote_registry_url' => $remote['registry_url'] ?? null,
+                'remote_registry_product' => $remote['registry_product'] ?? null,
+                'remote_key_present' => ! empty($remote['key_present']),
+                // POST target for the one-click "Update" button. Empty when
+                // no source (GitHub repo or registry) is configured.
+                'remote_install_url' => ($remote['repo'] !== null || ($remote['kind'] ?? null) === 'registry')
+                    ? $releasesPostUrl
+                    : '',
                 'settings_url' => $settingsAvailable
                     ? ee('CP/URL')->make('addons/settings/' . $shortName)->compile()
                     : '',
@@ -279,22 +312,27 @@ class PackageInstaller
             'update_available' => false,
             // status ∈ {unconfigured, never_checked, stale, fresh, error}
             'status' => 'unconfigured',
-            // trust_state ∈ {none, unverified, trusted, changed}
+            // trust_state ∈ {none, unverified, trusted, changed, registry}
             'trust_state' => 'none',
             'trust_diff' => [],
             'trust_pinned' => null,
             'trust_observed' => null,
+            // kind ∈ {null, github, registry} — null when no source configured
+            'kind' => null,
+            'registry_url' => null,
+            'registry_product' => null,
+            'key_present' => false,
         ];
 
         $mapping = $this->sources()->resolve($shortName);
         if ($mapping === null) {
             return $empty;
         }
-        // This method resolves GitHub remote state only. A `registry:`
-        // source is handled by its own checker/UI — treat it as no GitHub
-        // mapping here so the GitHub Releases surface stays stable.
-        if (($mapping['type'] ?? 'github') !== 'github') {
-            return $empty;
+        // A `registry:` source reads from the registry cache via its own
+        // checker (still no HTTP here — refresh() is the only path that
+        // hits the network).
+        if (($mapping['type'] ?? 'github') === 'registry') {
+            return $this->resolveRegistryRemote($shortName, $installedVersion, $mapping, $empty);
         }
 
         $repo = $mapping['repo'];
@@ -317,6 +355,7 @@ class PackageInstaller
 
         if ($checkedAt === 0) {
             return array_merge($empty, [
+                'kind' => 'github',
                 'repo' => $repo,
                 'source' => $mapping['source'],
                 'status' => 'never_checked',
@@ -326,6 +365,7 @@ class PackageInstaller
         if ($cached === null) {
             // Cache exists but is a sentinel — last fetch failed.
             return array_merge($empty, [
+                'kind' => 'github',
                 'repo' => $repo,
                 'source' => $mapping['source'],
                 'checked_at' => $checkedAt,
@@ -338,7 +378,8 @@ class PackageInstaller
             && $installedVersion !== ''
             && GitHubReleaseChecker::isNewer($remoteVersion, $installedVersion);
 
-        return [
+        return array_merge($empty, [
+            'kind' => 'github',
             'repo' => $repo,
             'source' => $mapping['source'],
             'version' => $remoteVersion,
@@ -352,7 +393,60 @@ class PackageInstaller
             'trust_diff' => $trustCmp['diff'] ?? [],
             'trust_pinned' => $trustCmp['pinned'] ?? null,
             'trust_observed' => $trustCmp['observed'] ?? null,
-        ];
+        ]);
+    }
+
+    /**
+     * Resolve the remote_* block for a `registry:` source from the registry
+     * cache. No HTTP (refresh() is the network path). Registry sources have
+     * no TOFU identity model — the trust anchors are the license gate, the
+     * signed download URL, and the sha256 verified at install time — so
+     * trust_state is the sentinel 'registry'.
+     */
+    private function resolveRegistryRemote(string $shortName, string $installedVersion, array $mapping, array $empty): array
+    {
+        $url     = (string) ($mapping['url'] ?? '');
+        $product = (string) ($mapping['product'] ?? '');
+        $host    = RegistryKeyStore::hostOf($url);
+
+        $base = array_merge($empty, [
+            'kind'             => 'registry',
+            'source'           => $mapping['source'] ?? 'manifest',
+            'registry_url'     => $url,
+            'registry_product' => $product,
+            'key_present'      => $this->keys()->hasKeyFor($host),
+            'trust_state'      => 'registry',
+        ]);
+
+        $checker   = $this->registry();
+        $checkedAt = $checker->lastCheckedAt($url, $product);
+        $cached    = $checker->cached($url, $product);
+
+        if ($checkedAt === 0) {
+            // Never checked — needs a license key + a refresh to populate.
+            return array_merge($base, [
+                'status' => $base['key_present'] ? 'never_checked' : 'unconfigured',
+            ]);
+        }
+        if ($cached === null) {
+            // Sentinel — last refresh failed (denied / unreachable).
+            return array_merge($base, ['checked_at' => $checkedAt, 'status' => 'error']);
+        }
+
+        $remoteVersion = (string) ($cached['version'] ?? '');
+        $isNewer = $remoteVersion !== ''
+            && $installedVersion !== ''
+            && GitHubReleaseChecker::isNewer($remoteVersion, $installedVersion);
+
+        return array_merge($base, [
+            'version'          => $remoteVersion,
+            'release_url'      => '',
+            'release_name'     => '',
+            'published_at'     => '',
+            'checked_at'       => $checkedAt,
+            'update_available' => $isNewer,
+            'status'           => $checker->isStale($url, $product) ? 'stale' : 'fresh',
+        ]);
     }
 
     /**
@@ -375,7 +469,18 @@ class PackageInstaller
 
             $shortName = basename($path);
             $mapping = $sources->resolve($shortName);
-            if ($mapping === null || ($mapping['type'] ?? 'github') !== 'github') {
+            if ($mapping === null) {
+                continue;
+            }
+
+            $type = $mapping['type'] ?? 'github';
+
+            if ($type === 'registry') {
+                $results[$shortName] = $this->refreshRegistry($shortName, $mapping);
+                continue;
+            }
+
+            if ($type !== 'github') {
                 continue;
             }
 
@@ -398,6 +503,52 @@ class PackageInstaller
         }
 
         return $results;
+    }
+
+    /**
+     * Refresh a single registry source. Resolves the license key for the
+     * endpoint host; a missing key is a soft failure (ok=false) rather than
+     * an error, so a site that hasn't entered its key yet just shows
+     * "no key configured" instead of a scary failure count.
+     *
+     * @return array{repo:?string,registry:string,product:string,source:?string,ok:bool,version:?string,reason:?string}
+     */
+    private function refreshRegistry(string $shortName, array $mapping): array
+    {
+        $url     = (string) ($mapping['url'] ?? '');
+        $product = (string) ($mapping['product'] ?? '');
+        $host    = RegistryKeyStore::hostOf($url);
+        $key     = $this->keys()->keyForUrl($url);
+
+        $base = [
+            'repo'     => null,
+            'registry' => $host,
+            'product'  => $product,
+            'source'   => $mapping['source'] ?? 'manifest',
+            'version'  => null,
+        ];
+
+        if ($key === '') {
+            return $base + ['ok' => false, 'reason' => 'no_license_key'];
+        }
+
+        $current = '';
+        try {
+            $addon = ee('Addon')->get($shortName);
+            $current = $addon ? (string) $addon->getVersion() : '';
+        } catch (\Throwable $e) {
+            // best-effort
+        }
+
+        $registry = $this->registry();
+        $data = $registry->refresh($url, $product, $key, $current);
+        $reason = $data === null ? (string) (($registry->lastError() ?? [])['reason'] ?? 'error') : null;
+
+        return $base + [
+            'ok'      => $data !== null,
+            'version' => $data['version'] ?? null,
+            'reason'  => $reason,
+        ];
     }
 
     /** Count of installed-packages cards that currently flag an upstream update. */

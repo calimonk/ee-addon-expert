@@ -25,20 +25,23 @@ $fmtAge = function (int $ts): string {
   <?php include __DIR__ . '/_finalize_banner.php'; ?>
 
   <section class="addi-card">
-    <h2>GitHub Release Tracking</h2>
+    <h2>Release Tracking</h2>
     <p class="addi-muted">
       For each installed add-on, point Addon Expert at a GitHub repo. The
       latest release is polled and compared against the on-disk version. Add-ons
       whose <code>addon.setup.php</code> declares <code>'github_repo' =&gt; 'owner/repo'</code>
-      are mapped automatically — you only need to fill in the rest.
+      are mapped automatically — you only need to fill in the rest. Private,
+      paid add-ons that declare a <code>registry</code> source are tracked the
+      same way through a license-gated vendor endpoint — set the license key
+      under <a href="<?= $h($settings_url ?? '') ?>">Settings</a>.
     </p>
 
     <p>
       <?php if ($updatesCount > 0): ?>
         <strong style="color:#b45309"><?= $updatesCount ?> update<?= $updatesCount === 1 ? '' : 's' ?> available</strong>
-        from GitHub across tracked add-ons.
+        across tracked add-ons.
       <?php else: ?>
-        <span class="addi-muted">No GitHub updates available right now.</span>
+        <span class="addi-muted">No updates available right now.</span>
       <?php endif; ?>
     </p>
 
@@ -73,7 +76,7 @@ $fmtAge = function (int $ts): string {
             <tr style="background:#f8fafc;text-align:left;color:#1e293b;font-weight:600">
               <th style="padding:9px 12px;white-space:nowrap">Add-on</th>
               <th style="padding:9px 12px;white-space:nowrap">Installed</th>
-              <th style="padding:9px 12px;min-width:220px">GitHub repo</th>
+              <th style="padding:9px 12px;min-width:220px">Source</th>
               <th style="padding:9px 12px;white-space:nowrap">Latest release</th>
               <th style="padding:9px 12px;white-space:nowrap">Checked</th>
               <th style="padding:9px 12px;white-space:nowrap" title="Trust on first use — does the GitHub repo identity (owner ID, repo ID, created_at) still match what was pinned on first install?">Trust</th>
@@ -98,12 +101,19 @@ $fmtAge = function (int $ts): string {
               $trustDiff  = (array) ($pkg['remote_trust_diff'] ?? []);
               $trustPinned = $pkg['remote_trust_pinned'] ?? null;
 
+              $kind        = (string) ($pkg['remote_kind'] ?? '');
+              $isRegistry  = $kind === 'registry';
+              $regUrl      = (string) ($pkg['remote_registry_url'] ?? '');
+              $regProduct  = (string) ($pkg['remote_registry_product'] ?? '');
+              $regHost     = $regUrl !== '' ? (string) parse_url($regUrl, PHP_URL_HOST) : '';
+              $keyPresent  = ! empty($pkg['remote_key_present']);
+
               $statusLabel = [
-                'unconfigured'  => 'Not tracked',
-                'never_checked' => 'Mapped (never checked)',
+                'unconfigured'  => $isRegistry ? 'License key required' : 'Not tracked',
+                'never_checked' => $isRegistry ? 'Configured (never checked)' : 'Mapped (never checked)',
                 'stale'         => 'Stale',
                 'fresh'         => 'Fresh',
-                'error'         => 'Last fetch failed',
+                'error'         => $isRegistry ? 'Registry refused / unreachable' : 'Last fetch failed',
               ][$status] ?? $status;
 
               // Trust mismatch is the loudest signal — paints the row red
@@ -122,7 +132,12 @@ $fmtAge = function (int $ts): string {
                 <?= $h($installed !== '' ? $installed : '—') ?>
               </td>
               <td style="padding:8px 12px">
-                <?php if ($isManifest): ?>
+                <?php if ($isRegistry): ?>
+                  <code style="background:#ede9fe;color:#5b21b6;padding:2px 6px;border-radius:3px">registry: <?= $h($regHost) ?></code>
+                  <div style="font-size:11px;color:#64748b;margin-top:2px">
+                    product <code><?= $h($regProduct) ?></code><?= $isManifest ? ' · declared in <code>addon.setup.php</code>' : '' ?>
+                  </div>
+                <?php elseif ($isManifest): ?>
                   <code style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:3px"><?= $h($remoteRepo) ?></code>
                   <div style="font-size:11px;color:#64748b;margin-top:2px">declared in <code>addon.setup.php</code></div>
                   <input type="hidden" name="repo[<?= $h($short) ?>]" value="<?= $h($adminValue) ?>">
@@ -151,7 +166,12 @@ $fmtAge = function (int $ts): string {
                 <?= $h($fmtAge($checkedAt)) ?>
               </td>
               <td style="padding:8px 12px;font-size:12px">
-                <?php if ($trustState === 'trusted'): ?>
+                <?php if ($isRegistry): ?>
+                  <span style="background:#ede9fe;color:#5b21b6;padding:3px 8px;border-radius:3px;font-weight:600"
+                        title="License-gated: the vendor verifies entitlement, the download URL is signed and short-lived, and the package sha256 is verified before install.">
+                    license-gated
+                  </span>
+                <?php elseif ($trustState === 'trusted'): ?>
                   <span style="background:#dcfce7;color:#166534;padding:3px 8px;border-radius:3px;font-weight:600"
                         title="Pinned <?= $h(date('Y-m-d', (int) ($trustPinned['first_seen_at'] ?? 0))) ?> by <?= $h((string) ($trustPinned['pinned_by'] ?? 'unknown')) ?>. owner_id=<?= $h((string) ($trustPinned['owner_id'] ?? '?')) ?>, repo_id=<?= $h((string) ($trustPinned['repo_id'] ?? '?')) ?>">
                     ✓ trusted
@@ -193,11 +213,15 @@ $fmtAge = function (int $ts): string {
                       Reconfirm trust
                     </button>
                   </form>
-                <?php elseif (! empty($pkg['remote_update_available']) && ! empty($pkg['remote_install_url'])): ?>
+                <?php elseif (! empty($pkg['remote_update_available']) && ! empty($pkg['remote_install_url']) && (! $isRegistry || $keyPresent)):
+                  $confirmSrc = $isRegistry
+                    ? ('from ' . $regHost . ' (license-gated; the package checksum is verified before install)')
+                    : 'from GitHub';
+                ?>
                   <form method="post"
                         action="<?= $h($pkg['remote_install_url']) ?>"
                         style="margin:0"
-                        onsubmit="return confirm('Download and replace <?= $h($name) ?> with v<?= $h($remoteVer) ?> from GitHub? The previous version will be kept as a backup.');">
+                        onsubmit="return confirm('Download and replace <?= $h($name) ?> with v<?= $h($remoteVer) ?> <?= $h($confirmSrc) ?>? The previous version will be kept as a backup.');">
                     <?php if ($csrfToken !== ''): ?>
                       <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
                       <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
@@ -210,8 +234,20 @@ $fmtAge = function (int $ts): string {
                       Install v<?= $h($remoteVer) ?>
                     </button>
                   </form>
+                <?php elseif ($isRegistry && ! empty($pkg['remote_update_available']) && ! $keyPresent): ?>
+                  <a href="<?= $h($settings_url ?? '') ?>"
+                     style="background:#5b21b6;color:#fff;padding:4px 10px;border-radius:3px;font-weight:600;font-size:12px;text-decoration:none"
+                     title="An update is available but no license key is configured for <?= $h($regHost) ?>.">
+                    Add license key
+                  </a>
                 <?php elseif (! empty($pkg['remote_update_available'])): ?>
                   <span style="background:#f59e0b;color:#fff;padding:3px 8px;border-radius:3px;font-weight:600">Update available</span>
+                <?php elseif ($isRegistry && ! $keyPresent): ?>
+                  <a href="<?= $h($settings_url ?? '') ?>"
+                     style="color:#5b21b6;font-weight:600;text-decoration:none"
+                     title="Add a license key for <?= $h($regHost) ?> to check for updates.">
+                    License key required
+                  </a>
                 <?php else: ?>
                   <?= $h($statusLabel) ?>
                 <?php endif; ?>

@@ -46,6 +46,8 @@ class ReleaseInstaller
     private InstallAuditor $auditor;
     private ?AutoFinalizer $finalizer;
     private ?OverrideStore $overrides;
+    private ?RegistryReleaseChecker $registryChecker;
+    private ?RegistryKeyStore $keys;
 
     public function __construct(
         ?string $addonsPath = null,
@@ -53,7 +55,9 @@ class ReleaseInstaller
         ?TrustStore $trust = null,
         ?InstallAuditor $auditor = null,
         ?AutoFinalizer $finalizer = null,
-        ?OverrideStore $overrides = null
+        ?OverrideStore $overrides = null,
+        ?RegistryReleaseChecker $registryChecker = null,
+        ?RegistryKeyStore $keys = null
     ) {
         $this->addonsPath = rtrim(
             $addonsPath ?: PackageInstaller::detectAddonsPath(),
@@ -65,6 +69,8 @@ class ReleaseInstaller
         $this->auditor = $auditor ?: new InstallAuditor();
         $this->finalizer = $finalizer;
         $this->overrides = $overrides;
+        $this->registryChecker = $registryChecker;
+        $this->keys = $keys;
     }
 
     private function overrides(): OverrideStore
@@ -75,6 +81,26 @@ class ReleaseInstaller
                 : new OverrideStore();
         }
         return $this->overrides;
+    }
+
+    private function registryChecker(): RegistryReleaseChecker
+    {
+        if ($this->registryChecker === null) {
+            $this->registryChecker = function_exists('ee')
+                ? ee('addon_expert:registryReleaseChecker')
+                : new RegistryReleaseChecker();
+        }
+        return $this->registryChecker;
+    }
+
+    private function keys(): RegistryKeyStore
+    {
+        if ($this->keys === null) {
+            $this->keys = function_exists('ee')
+                ? ee('addon_expert:registryKeyStore')
+                : new RegistryKeyStore();
+        }
+        return $this->keys;
     }
 
     /**
@@ -285,6 +311,226 @@ class ReleaseInstaller
             // target as post_install_url now.
             'update_url'      => $postInstallUrl,
         ];
+    }
+
+    /**
+     * Install the latest release for $shortName from a license-gated
+     * registry endpoint.
+     *
+     * The registry model replaces GitHub's TOFU identity gate with three
+     * other guarantees, so there is no owner/repo trust pinning here:
+     *   1. the worker only answers for a license key entitled to $product,
+     *   2. the download URL it returns is short-lived and signed, and
+     *   3. the manifest carries a sha256 we verify before extracting.
+     * The license + signature + checksum ARE the supply-chain anchors.
+     *
+     * $licenseKey is resolved from the RegistryKeyStore (by host) when null.
+     *
+     * @return array{short_name:string, version:string, source:string, backup_path:?string, is_self:bool, post_install_url:string, update_url:string}
+     */
+    public function installLatestFromRegistry(string $shortName, string $url, string $product, ?string $licenseKey = null): array
+    {
+        if (! preg_match('#^[a-z0-9_]+$#', $shortName)) {
+            throw new RuntimeException('Invalid add-on short name: ' . $shortName);
+        }
+        if (! RegistryReleaseChecker::isValidEndpoint($url) || $product === '') {
+            throw new RuntimeException('Invalid registry source for ' . $shortName . '.');
+        }
+        if (! class_exists(ZipArchive::class)) {
+            throw new RuntimeException('PHP ZipArchive extension is required.');
+        }
+
+        $host = RegistryKeyStore::hostOf($url);
+        $key  = $licenseKey !== null ? trim($licenseKey) : $this->keys()->keyForUrl($url);
+        if ($key === '') {
+            $this->auditor->record([
+                'event' => 'install_blocked',
+                'reason' => 'no_license_key',
+                'short_name' => $shortName,
+                'registry' => $host,
+                'product' => $product,
+            ]);
+            throw new RuntimeException(
+                'No license key is configured for ' . $host . '. '
+                . 'Add it under Addon Expert → Settings → Registry license keys.'
+            );
+        }
+
+        $currentVersion = '';
+        if (function_exists('ee')) {
+            try {
+                $addon = ee('Addon')->get($shortName);
+                $currentVersion = $addon ? (string) $addon->getVersion() : '';
+            } catch (\Throwable $e) {
+                // best-effort
+            }
+        }
+
+        // 1. Resolve the manifest. Forced refresh — we want the actual
+        //    newest release, not a possibly-stale cache entry.
+        $checker  = $this->registryChecker();
+        $manifest = $checker->refresh($url, $product, $key, $currentVersion);
+        if ($manifest === null) {
+            $err = $checker->lastError() ?: ['code' => 0, 'reason' => 'unreachable'];
+            $this->auditor->record([
+                'event' => 'install_blocked',
+                'reason' => 'registry_' . $err['reason'],
+                'short_name' => $shortName,
+                'registry' => $host,
+                'product' => $product,
+                'http_code' => (int) $err['code'],
+            ]);
+            throw new RuntimeException($this->registryErrorMessage($host, $product, $err));
+        }
+
+        $downloadUrl = (string) ($manifest['download_url'] ?? '');
+        $version     = (string) ($manifest['version'] ?? '');
+        $expectSha   = strtolower((string) ($manifest['sha256'] ?? ''));
+        if ($downloadUrl === '') {
+            throw new RuntimeException('Registry returned no download URL for ' . $shortName . '.');
+        }
+
+        // 2. Download the signed URL (worker streams the asset from GitHub).
+        try {
+            $tmpZip = $this->downloadToTemp($downloadUrl);
+        } catch (\Throwable $e) {
+            $this->auditor->record([
+                'event' => 'install_failed',
+                'reason' => 'download',
+                'short_name' => $shortName,
+                'registry' => $host,
+                'product' => $product,
+                'version' => $version,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+
+        // 3. Integrity gate: the manifest's sha256 must match the bytes we
+        //    got. A signed URL proves the worker issued it; the checksum
+        //    proves the asset wasn't swapped in transit or at the origin.
+        if ($expectSha !== '') {
+            $actual = strtolower((string) hash_file('sha256', $tmpZip));
+            if (! hash_equals($expectSha, $actual)) {
+                @unlink($tmpZip);
+                $this->auditor->record([
+                    'event' => 'install_blocked',
+                    'reason' => 'sha256_mismatch',
+                    'short_name' => $shortName,
+                    'registry' => $host,
+                    'product' => $product,
+                    'version' => $version,
+                    'expected_sha256' => $expectSha,
+                    'actual_sha256' => $actual,
+                ]);
+                throw new RuntimeException(
+                    'Checksum mismatch for ' . $shortName . ' — the downloaded package does not match '
+                    . 'the registry manifest (expected ' . substr($expectSha, 0, 12) . '…, got '
+                    . substr($actual, 0, 12) . '…). Install refused.'
+                );
+            }
+        } else {
+            // No checksum in the manifest — proceed, but record the gap so
+            // a vendor misconfiguration is visible after the fact.
+            $this->auditor->record([
+                'event' => 'install_warning',
+                'reason' => 'sha256_absent',
+                'short_name' => $shortName,
+                'registry' => $host,
+                'product' => $product,
+                'version' => $version,
+            ]);
+        }
+
+        // 4. Extract + swap — identical handling to the GitHub path.
+        try {
+            $stagingDir = $this->extractStaging($tmpZip, $shortName);
+        } catch (\Throwable $e) {
+            @unlink($tmpZip);
+            $this->auditor->record([
+                'event' => 'install_failed',
+                'reason' => 'extract',
+                'short_name' => $shortName,
+                'registry' => $host,
+                'product' => $product,
+                'version' => $version,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+        @unlink($tmpZip);
+
+        try {
+            $backupPath = $this->swapInto($shortName, $stagingDir);
+        } catch (\Throwable $e) {
+            $this->auditor->record([
+                'event' => 'install_failed',
+                'reason' => 'swap',
+                'short_name' => $shortName,
+                'registry' => $host,
+                'product' => $product,
+                'version' => $version,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+
+        $checker->forget($url, $product);
+
+        $isSelf = $shortName === 'addon_expert';
+        try {
+            $this->finalizer()->schedule($shortName, $currentVersion !== '' ? $currentVersion : 'unknown', $version);
+        } catch (\Throwable $e) {
+            // Marker write failure is non-fatal.
+        }
+
+        $this->auditor->record([
+            'event' => 'install_ok',
+            'short_name' => $shortName,
+            'repo' => null,
+            'registry' => $host,
+            'product' => $product,
+            'version' => $version,
+            // Sanitized — never log the signed token from the download URL.
+            'url' => $host . ' (' . $product . ')',
+            'source' => 'registry:' . $host,
+            'backup_path' => $backupPath,
+            'sha256' => $expectSha,
+            'is_self' => $isSelf,
+        ]);
+
+        $postInstallUrl = function_exists('ee')
+            ? ee('CP/URL')->make('addons')->compile()
+            : '';
+
+        return [
+            'short_name'       => $shortName,
+            'version'          => $version,
+            'source'           => 'registry:' . $host,
+            'backup_path'      => $backupPath,
+            'is_self'          => $isSelf,
+            'post_install_url' => $postInstallUrl,
+            'update_url'       => $postInstallUrl,
+        ];
+    }
+
+    /**
+     * Map a registry failure {code, reason} to a CP-banner-ready sentence.
+     */
+    private function registryErrorMessage(string $host, string $product, array $err): string
+    {
+        $reason = (string) ($err['reason'] ?? 'error');
+        $map = [
+            'invalid_key'     => 'The license key for ' . $host . ' was rejected (invalid or unknown).',
+            'expired'         => 'The license key for ' . $host . ' has expired.',
+            'not_entitled'    => 'This license does not entitle "' . $product . '" from ' . $host . '.',
+            'unknown_product' => $host . ' does not offer "' . $product . '".',
+            'not_configured'  => $host . ' is not configured to serve releases yet.',
+            'unreachable'     => 'Could not reach the registry at ' . $host . '. Check connectivity and retry.',
+            'bad_response'    => $host . ' returned an unexpected response.',
+        ];
+        $msg = $map[$reason] ?? ('Registry refused the request (' . $reason . ').');
+        return $msg . ' Update refused.';
     }
 
     /**

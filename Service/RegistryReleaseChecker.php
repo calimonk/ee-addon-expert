@@ -33,10 +33,25 @@ class RegistryReleaseChecker
     /** @var callable|null fn(string $url, string $jsonBody, int $timeout): array{0:int,1:?string} */
     private $http;
 
+    /** @var array{code:int,reason:string}|null reason the last refresh() failed */
+    private ?array $lastError = null;
+
     public function __construct(?string $cacheDir = null, ?callable $http = null)
     {
         $this->cacheDir = rtrim($cacheDir ?: self::detectCacheDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->http = $http;
+    }
+
+    /**
+     * Why the most recent refresh() returned null (HTTP code + a reason
+     * token, e.g. invalid_key / not_entitled / expired / not_configured /
+     * unreachable / bad_response). Null after a successful refresh.
+     *
+     * @return array{code:int,reason:string}|null
+     */
+    public function lastError(): ?array
+    {
+        return $this->lastError;
     }
 
     public static function detectCacheDir(): string
@@ -105,6 +120,7 @@ class RegistryReleaseChecker
 
         [$code, $body] = $this->post($baseUrl, (string) $payload);
         $data = $this->parse($code, $body);
+        $this->lastError = $data === null ? $this->errorFrom($code, $body) : null;
 
         $this->ensureCacheDir();
         @file_put_contents(
@@ -146,6 +162,34 @@ class RegistryReleaseChecker
             'size'         => (int) ($d['size'] ?? 0),
             'fetched_at'   => time(),
         ];
+    }
+
+    /**
+     * Derive a {code, reason} pair from a failed response. Prefers the
+     * worker's own `reason` field; otherwise maps the HTTP status to a
+     * stable token the UI can switch on.
+     *
+     * @return array{code:int,reason:string}
+     */
+    private function errorFrom(int $code, ?string $body): array
+    {
+        $reason = '';
+        if (is_string($body) && $body !== '') {
+            $d = json_decode($body, true);
+            if (is_array($d) && ! empty($d['reason']) && is_string($d['reason'])) {
+                $reason = $d['reason'];
+            }
+        }
+        if ($reason === '') {
+            $reason = [
+                0   => 'unreachable',
+                401 => 'invalid_key',
+                403 => 'not_entitled',
+                404 => 'unknown_product',
+                503 => 'not_configured',
+            ][$code] ?? ($code === 200 ? 'bad_response' : 'error');
+        }
+        return ['code' => $code, 'reason' => $reason];
     }
 
     /** @return array{0:int,1:?string} [http_code, body] */

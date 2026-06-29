@@ -82,7 +82,19 @@ $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
   </section>
 
   <section class="addi-card">
-    <h2>6. Compatibility &amp; force override</h2>
+    <h2>6. Private add-ons via a license registry</h2>
+    <p class="addi-muted">Paid or private add-ons can't ship from a public GitHub repo. Instead they declare a <strong>registry</strong> source — a license-gated vendor endpoint — and Addon Expert tracks and installs them exactly like GitHub releases.</p>
+    <ul class="addi-list">
+      <li><strong>Author-declared:</strong> the add-on's <code>addon.setup.php</code> contains <code>'registry' =&gt; ['url' =&gt; 'https://vendor/releases', 'product' =&gt; 'slug']</code>.</li>
+      <li><strong>One license key per vendor:</strong> enter it once per endpoint host under <strong>Settings → Registry license keys</strong> (or pin it in <code>config.php</code> via <code>$config['addon_expert_registry_key']</code> / the per-host <code>addon_expert_registry_keys</code> array, or the <code>ADDON_EXPERT_REGISTRY_KEY</code> env var). The key is the only secret on the site — the vendor holds the GitHub token.</li>
+      <li><strong>How a check works:</strong> Addon Expert POSTs <code>{key, product, current_version}</code> to the endpoint; the vendor validates entitlement and returns the latest version, a short-lived signed download URL, and a sha256.</li>
+      <li><strong>Integrity gate:</strong> instead of GitHub's trust-on-first-use, the download is verified against the manifest's sha256 before the atomic swap. A mismatch hard-blocks the install and is audit-logged.</li>
+      <li>Registry updates appear on the Releases screen alongside GitHub ones with a <code>license-gated</code> badge. No key configured → the row prompts you to add one.</li>
+    </ul>
+  </section>
+
+  <section class="addi-card">
+    <h2>7. Compatibility &amp; force override</h2>
     <p class="addi-muted">EE refuses to install an add-on that declares a newer PHP/EE than the server runs. Addon Expert surfaces that verdict earlier and lets you force it when the requirement is over-declared.</p>
     <ul class="addi-list">
       <li>Incompatible uploads are <strong>held</strong> and show a confirm screen with the unmet requirement and a heuristic <strong>feature scan</strong> ("no PHP 8.3 features detected — appears safe to force" vs "uses <code>json_validate()</code> — will fatal").</li>
@@ -92,9 +104,10 @@ $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
   </section>
 
   <section class="addi-card">
-    <h2>7. Settings &amp; CP menu</h2>
+    <h2>8. Settings &amp; CP menu</h2>
     <ul class="addi-list">
       <li><strong>Custom-menu integration:</strong> show Addon Expert in the CP Custom menu with a configurable label (default "Addons") and an optional pending-update count, e.g. <code>Addons (3)</code>. You still add the entry once via <strong>Settings → Menu Manager</strong>.</li>
+      <li><strong>Registry license keys:</strong> one key per vendor host for private add-ons (see section 6).</li>
       <li><strong>Auto-finalize</strong> the EE-side update after an install (default on).</li>
       <li><strong>Lazy refresh</strong> of stale release caches when the Releases screen loads (default on).</li>
     </ul>
@@ -107,6 +120,7 @@ $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
       <li><code>system/user/config/addon_expert_trust.json</code> — pinned trust anchors</li>
       <li><code>system/user/config/addon_expert_overrides.json</code> — requirement overrides</li>
       <li><code>system/user/config/addon_expert_settings.json</code> — this screen's settings</li>
+      <li><code>system/user/config/addon_expert_registry_keys.json</code> — registry license keys (per vendor host)</li>
       <li><code>system/user/cache/addon_expert/</code> — release cache, audit log, backups, and held uploads</li>
     </ul>
   </section>

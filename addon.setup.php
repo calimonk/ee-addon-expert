@@ -6,6 +6,7 @@ use Nivoli\AddonExpert\Service\GitHubReleaseChecker;
 use Nivoli\AddonExpert\Service\InstallAuditor;
 use Nivoli\AddonExpert\Service\OverrideStore;
 use Nivoli\AddonExpert\Service\PackageInstaller;
+use Nivoli\AddonExpert\Service\RegistryKeyStore;
 use Nivoli\AddonExpert\Service\RegistryReleaseChecker;
 use Nivoli\AddonExpert\Service\ReleaseInstaller;
 use Nivoli\AddonExpert\Service\SettingsStore;
@@ -15,7 +16,7 @@ use Nivoli\AddonExpert\Service\UpdateSourceRegistry;
 return [
     'name'              => 'Addon Expert',
     'description'       => 'Install, update, and track ExpressionEngine add-ons — ZIP uploads, GitHub releases, one-click updates, supply-chain checks. Based on Addon Manager + by Javid Fazaeli (MIT).',
-    'version'           => '2.2.0',
+    'version'           => '2.3.0',
     'author'            => 'Codebit',
     'author_url'        => 'https://codebit.nl',
     'namespace'         => 'Nivoli\AddonExpert',
@@ -33,6 +34,12 @@ return [
         },
         'RegistryReleaseChecker' => function($addon) {
             return ee('addon_expert:registryReleaseChecker');
+        },
+        'registryKeyStore' => function($addon) {
+            return new RegistryKeyStore();
+        },
+        'RegistryKeyStore' => function($addon) {
+            return ee('addon_expert:registryKeyStore');
         },
         'updateSourceRegistry' => function($addon) {
             return new UpdateSourceRegistry();
@@ -85,7 +92,9 @@ return [
                 ee('addon_expert:trustStore'),
                 ee('addon_expert:installAuditor'),
                 ee('addon_expert:autoFinalizer'),
-                ee('addon_expert:overrideStore')
+                ee('addon_expert:overrideStore'),
+                ee('addon_expert:registryReleaseChecker'),
+                ee('addon_expert:registryKeyStore')
             );
         },
         'ReleaseInstaller' => function($addon) {
@@ -99,7 +108,9 @@ return [
                 ee('addon_expert:autoFinalizer'),
                 ee('addon_expert:installAuditor'),
                 ee('addon_expert:overrideStore'),
-                ee('addon_expert:compatibilityScanner')
+                ee('addon_expert:compatibilityScanner'),
+                ee('addon_expert:registryReleaseChecker'),
+                ee('addon_expert:registryKeyStore')
             );
         },
         'PackageInstaller' => function($addon) {
