@@ -34,20 +34,21 @@ $inputCss = 'padding:5px 8px;border:1px solid #cbd5e1;border-radius:4px;font-fam
         <?php endif; ?>
         <input type="hidden" name="save_sources" value="1">
 
-        <div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
-          <?php foreach ($rows as $i => $r):
-            $short    = (string) $r['short_name'];
-            $name     = (string) $r['name'];
-            $inst     = (string) $r['installed'];
-            $isMan    = ! empty($r['is_manifest']);
-            $declared = $r['declared'] ?? null;
-            $type     = (string) ($r['admin_type'] ?? 'none');
-            $repo     = (string) ($r['admin_repo'] ?? '');
-            $regUrl   = (string) ($r['admin_reg_url'] ?? '');
-            $regProd  = (string) ($r['admin_reg_product'] ?? '');
-            $rowBg    = $i % 2 ? '#f8fafc' : '#fff';
+        <?php
+        // One row's markup (buffered so it can be grouped into sections).
+        $renderRow = function (array $r, int $i) use ($h, $inputCss) {
+          $short    = (string) $r['short_name'];
+          $name     = (string) $r['name'];
+          $inst     = (string) $r['installed'];
+          $isMan    = ! empty($r['is_manifest']);
+          $declared = $r['declared'] ?? null;
+          $type     = (string) ($r['admin_type'] ?? 'none');
+          $repo     = (string) ($r['admin_repo'] ?? '');
+          $regUrl   = (string) ($r['admin_reg_url'] ?? '');
+          $regProd  = (string) ($r['admin_reg_product'] ?? '');
+          ob_start();
           ?>
-          <div style="padding:12px 16px;border-top:<?= $i ? '1px solid #f1f5f9' : '0' ?>;background:<?= $rowBg ?>">
+          <div style="padding:12px 16px;border-top:<?= $i ? '1px solid #f1f5f9' : '0' ?>;background:<?= $i % 2 ? '#f8fafc' : '#fff' ?>">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
               <div>
                 <span style="font-weight:600;color:#1e293b"><?= $h($name) ?></span>
@@ -92,8 +93,40 @@ $inputCss = 'padding:5px 8px;border:1px solid #cbd5e1;border-radius:4px;font-fam
               </div>
             <?php endif; ?>
           </div>
-          <?php endforeach; ?>
-        </div>
+          <?php
+          return ob_get_clean();
+        };
+
+        // Configured = a source is declared (manifest, read-only) or set
+        // here (admin). Everything else is open to configure.
+        $configured = [];
+        $open = [];
+        foreach ($rows as $r) {
+          if (! empty($r['is_manifest']) || (($r['admin_type'] ?? 'none') !== 'none')) {
+            $configured[] = $r;
+          } else {
+            $open[] = $r;
+          }
+        }
+        ?>
+
+        <?php if (! empty($configured)): ?>
+          <div class="addi-pkg-section">
+            <h3>Configured <span class="addi-pkg-count"><?= count($configured) ?></span></h3>
+            <div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
+              <?php foreach ($configured as $i => $r) { echo $renderRow($r, $i); } ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <?php if (! empty($open)): ?>
+          <div class="addi-pkg-section">
+            <h3>Available to configure <span class="addi-pkg-count"><?= count($open) ?></span></h3>
+            <div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
+              <?php foreach ($open as $i => $r) { echo $renderRow($r, $i); } ?>
+            </div>
+          </div>
+        <?php endif; ?>
 
         <p style="margin-top:14px">
           <button class="button button--primary" type="submit">Save sources</button>

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-06-29
+
+### Changed
+- **Update Sources screen grouped** into two sections — **Configured**
+  (manifest-declared read-only sources + sources set here) and **Available to
+  configure** (everything without a source yet) — for clearer separation.
+
 ## [2.7.0] - 2026-06-29
 
 ### Added
