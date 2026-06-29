@@ -217,37 +217,11 @@ class Releases extends AbstractRoute
             ee()->functions->redirect($selfUrl);
         }
 
-        // POST: save admin mappings.
-        if (ee('Request')->isPost() && ee()->input->post('save_mappings')) {
-            $raw = (array) ee()->input->post('repo');
-            $map = [];
-            foreach ($raw as $shortName => $repo) {
-                $shortName = (string) $shortName;
-                $repo = trim((string) $repo);
-                if ($shortName !== '' && $repo !== '') {
-                    $map[$shortName] = $repo;
-                }
-            }
-
-            if ($registry->saveAll($map)) {
-                ee('CP/Alert')->makeBanner('addon-installer-release-mappings')
-                    ->asSuccess()
-                    ->withTitle('Mappings saved')
-                    ->addToBody('GitHub release sources updated. Click "Check for updates" to refresh.')
-                    ->defer();
-            } else {
-                ee('CP/Alert')->makeBanner('addon-installer-release-mappings')
-                    ->asIssue()
-                    ->withTitle('Mappings could not be saved')
-                    ->addToBody('Check that system/user/config is writable.')
-                    ->defer();
-            }
-
-            ee()->functions->redirect($selfUrl);
-        }
+        // Source mapping moved to its own screen (Update Sources). The
+        // Releases screen is now read-only about *where* updates come from;
+        // it just tracks + installs them.
 
         $packages = $installer->installedPackages();
-        $adminMap = $registry->all();
 
         $updatesCount = 0;
         foreach ($packages as $pkg) {
@@ -258,15 +232,14 @@ class Releases extends AbstractRoute
 
         $this->setBody('Releases', [
             'packages'         => $packages,
-            'admin_map'        => $adminMap,
             'updates_count'    => $updatesCount,
             'refresh_url'      => $selfUrl->compile(),
-            'save_url'         => $selfUrl->compile(),
             'csrf_token'       => $installer->csrfToken(),
             'manager_url'      => ee('CP/URL')->make('addons')->compile(),
             'packages_url'     => ee('CP/URL')->make('addons/settings/addon_expert/packages')->compile(),
             'audit_url'        => ee('CP/URL')->make('addons/settings/addon_expert/audit-log')->compile(),
             'docs_url'         => ee('CP/URL')->make('addons/settings/addon_expert/documentation')->compile(),
+            'sources_url'      => ee('CP/URL')->make('addons/settings/addon_expert/sources')->compile(),
             'settings_url'     => ee('CP/URL')->make('addons/settings/addon_expert/settings')->compile(),
             'finalize_results' => $finalizeResults,
         ]);

@@ -77,9 +77,17 @@ class UpdateSourceRegistry
             ];
         }
 
-        $adminRepo = $this->adminMap()[$shortName] ?? null;
-        if (is_string($adminRepo) && $adminRepo !== '') {
-            return ['type' => 'github', 'repo' => $adminRepo, 'source' => self::SOURCE_ADMIN];
+        $adminEntry = $this->adminMap()[$shortName] ?? null;
+        if (is_string($adminEntry) && $adminEntry !== '') {
+            return ['type' => 'github', 'repo' => $adminEntry, 'source' => self::SOURCE_ADMIN];
+        }
+        if (is_array($adminEntry) && ($adminEntry['type'] ?? '') === 'registry') {
+            return [
+                'type'    => 'registry',
+                'url'     => $adminEntry['url'],
+                'product' => $adminEntry['product'],
+                'source'  => self::SOURCE_ADMIN,
+            ];
         }
 
         return null;
@@ -92,23 +100,28 @@ class UpdateSourceRegistry
     }
 
     /**
-     * Replace the admin map. Caller passes [short_name => owner/repo] —
-     * empty values delete the mapping for that short_name. Invalid repo
-     * strings are silently dropped.
+     * Replace the admin map. Caller passes [short_name => spec] where spec
+     * is one of:
+     *   - 'owner/repo'                                  (GitHub)
+     *   - ['type' => 'github', 'repo' => 'owner/repo']  (GitHub, explicit)
+     *   - ['type' => 'registry', 'url' => …, 'product' => …]
+     *   - '' / null / invalid                           (drops the mapping)
+     *
+     * GitHub entries persist as a plain string (backward-compatible with the
+     * pre-registry file format); registry entries persist as an array.
      */
     public function saveAll(array $map): bool
     {
         $clean = [];
-        foreach ($map as $shortName => $repo) {
+        foreach ($map as $shortName => $spec) {
             $shortName = (string) $shortName;
-            $repo = trim((string) $repo);
-            if ($shortName === '' || $repo === '') {
+            if ($shortName === '') {
                 continue;
             }
-            if (! GitHubReleaseChecker::isValidRepo($repo)) {
-                continue;
+            $entry = $this->normalizeAdminEntry($spec);
+            if ($entry !== null) {
+                $clean[$shortName] = $entry;
             }
-            $clean[$shortName] = $repo;
         }
 
         $this->adminMap = $clean;
@@ -122,6 +135,38 @@ class UpdateSourceRegistry
             $this->mapFile,
             json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
+    }
+
+    /**
+     * Validate + normalize one admin-map entry to its stored form (a GitHub
+     * repo string, or a registry array), or null if invalid.
+     *
+     * @return string|array{type:string,url:string,product:string}|null
+     */
+    private function normalizeAdminEntry($spec)
+    {
+        if (is_string($spec)) {
+            $repo = trim($spec);
+            return ($repo !== '' && GitHubReleaseChecker::isValidRepo($repo)) ? $repo : null;
+        }
+        if (! is_array($spec)) {
+            return null;
+        }
+
+        $type = $spec['type'] ?? (isset($spec['url']) ? 'registry' : (isset($spec['repo']) ? 'github' : ''));
+
+        if ($type === 'github') {
+            $repo = trim((string) ($spec['repo'] ?? ''));
+            return ($repo !== '' && GitHubReleaseChecker::isValidRepo($repo)) ? $repo : null;
+        }
+        if ($type === 'registry') {
+            $url = trim((string) ($spec['url'] ?? ''));
+            $product = preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($spec['product'] ?? '')));
+            if (RegistryReleaseChecker::isValidEndpoint($url) && $product !== '') {
+                return ['type' => 'registry', 'url' => $url, 'product' => $product];
+            }
+        }
+        return null;
     }
 
     /** Repo declared in the add-on's own setup.php, or null if absent. */
@@ -216,12 +261,13 @@ class UpdateSourceRegistry
         }
 
         $clean = [];
-        foreach ($decoded as $shortName => $repo) {
-            if (! is_string($shortName) || ! is_string($repo)) {
+        foreach ($decoded as $shortName => $spec) {
+            if (! is_string($shortName)) {
                 continue;
             }
-            if (GitHubReleaseChecker::isValidRepo($repo)) {
-                $clean[$shortName] = $repo;
+            $entry = $this->normalizeAdminEntry($spec);
+            if ($entry !== null) {
+                $clean[$shortName] = $entry;
             }
         }
 

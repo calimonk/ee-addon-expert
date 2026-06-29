@@ -43,6 +43,10 @@ class Sidebar extends AbstractSidebar
             ->withIcon('cloud-download')
             ->isActive(strpos($current, $this->base . 'releases') !== false);
 
+        $list->addItem('Update Sources', $mk('sources'))
+            ->withIcon('link')
+            ->isActive(strpos($current, $this->base . 'sources') !== false);
+
         $list->addItem('Audit Log', $mk('audit-log'))
             ->withIcon('clipboard-list')
             ->isActive(strpos($current, $this->base . 'audit-log') !== false);

@@ -137,4 +137,47 @@ check('product slug normalized to [a-z0-9_]', $r && $r['product'] === 'cfimage')
 $g = $reg->resolve('gh_addon');
 check('github manifest still → type github + repo', $g && $g['type'] === 'github' && $g['repo'] === 'owner/repo');
 
+section('admin-map source mapping (github + registry)');
+
+$mapFile = SYSPATH . 'user/config/admin_map_' . bin2hex(random_bytes(3)) . '.json';
+$emptyAddons = SYSPATH . 'user/addons_empty';
+@mkdir($emptyAddons, 0775, true);
+$am = new UpdateSourceRegistry($mapFile, $emptyAddons);
+
+$am->saveAll([
+    'gh_one'   => 'owner/repo',
+    'reg_one'  => ['type' => 'registry', 'url' => 'https://reg.example/releases', 'product' => 'Cf-Image!!'],
+    'bad_repo' => 'not a repo',                                              // invalid → dropped
+    'bad_reg'  => ['type' => 'registry', 'url' => 'http://x', 'product' => 'p'], // http → dropped
+    'blank'    => '',                                                        // dropped
+]);
+
+$g1 = $am->resolve('gh_one');
+check('admin github → github + repo + source admin', $g1 && $g1['type'] === 'github' && $g1['repo'] === 'owner/repo' && $g1['source'] === UpdateSourceRegistry::SOURCE_ADMIN);
+$r1 = $am->resolve('reg_one');
+check('admin registry → registry + url', $r1 && $r1['type'] === 'registry' && $r1['url'] === 'https://reg.example/releases');
+check('admin registry product normalized', $r1 && $r1['product'] === 'cfimage');
+check('admin registry source = admin', $r1 && $r1['source'] === UpdateSourceRegistry::SOURCE_ADMIN);
+check('invalid repo dropped', $am->resolve('bad_repo') === null);
+check('http registry dropped', $am->resolve('bad_reg') === null);
+check('blank dropped', $am->resolve('blank') === null);
+
+$am2 = new UpdateSourceRegistry($mapFile, $emptyAddons);
+check('github persists across reload', ($am2->resolve('gh_one')['repo'] ?? '') === 'owner/repo');
+check('registry persists across reload', ($am2->resolve('reg_one')['type'] ?? '') === 'registry');
+
+$onDisk = json_decode((string) file_get_contents($mapFile), true);
+check('github stored as plain string (back-compat)', isset($onDisk['gh_one']) && is_string($onDisk['gh_one']));
+check('registry stored as array', isset($onDisk['reg_one']) && is_array($onDisk['reg_one']));
+
+section('manifest precedence over admin map');
+
+// gh_addon (from the manifest section above) declares github_repo in its
+// setup.php; an admin registry entry must NOT override it.
+$precFile = SYSPATH . 'user/config/admin_map_prec.json';
+$prec = new UpdateSourceRegistry($precFile, $addons);
+$prec->saveAll(['gh_addon' => ['type' => 'registry', 'url' => 'https://other.example/releases', 'product' => 'x']]);
+$pr = $prec->resolve('gh_addon');
+check('manifest wins over admin entry', $pr && $pr['type'] === 'github' && $pr['source'] === UpdateSourceRegistry::SOURCE_MANIFEST);
+
 done();

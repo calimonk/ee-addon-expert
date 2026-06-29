@@ -6,7 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [2.3.0] - 2026-06-29
+## [2.4.0] - 2026-06-29
+
+### Added
+- **Update Sources screen.** A dedicated screen to choose, per installed
+  add-on, where its updates come from — a **GitHub repo** or a **license-gated
+  registry** (`url` + `product`) — for add-ons that don't declare a source in
+  their own `addon.setup.php`. The admin map now stores registry sources
+  (alongside GitHub repos, which keep their plain-string format).
+
+### Changed
+- Source mapping moved off the Releases screen onto the new Update Sources
+  screen; the Releases screen now shows each add-on's source read-only and
+  links to it. A manifest-declared source still always wins and shows
+  read-only.
 
 ### Added
 - **License-gated registry update source.** Private/paid add-ons can declare
