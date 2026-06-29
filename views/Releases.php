@@ -76,7 +76,27 @@ $fmtAge = function (int $ts): string {
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($packages as $pkg):
+            <?php
+            // Surface the updatable add-ons in their own group at the top.
+            $updates = [];
+            $rest = [];
+            foreach ($packages as $p2) {
+              if (! empty($p2['remote_update_available']) || ! empty($p2['update_available'])) {
+                $updates[] = $p2;
+              } else {
+                $rest[] = $p2;
+              }
+            }
+            $ordered = array_merge($updates, $rest);
+            $nUpd = count($updates);
+            $relIndex = 0;
+            foreach ($ordered as $pkg):
+              if ($relIndex === 0 && $nUpd > 0) {
+                echo '<tr><td colspan="7" style="padding:8px 14px;background:#fffbeb;border-top:1px solid #f1f5f9;font-weight:700;color:#92400e;font-size:12.5px">Updates available (' . (int) $nUpd . ')</td></tr>';
+              } elseif ($relIndex === $nUpd && ! empty($rest)) {
+                echo '<tr><td colspan="7" style="padding:8px 14px;background:#f8fafc;border-top:1px solid #f1f5f9;font-weight:700;color:#475569;font-size:12.5px">All tracked add-ons (' . count($rest) . ')</td></tr>';
+              }
+              $relIndex++;
               $short      = (string) ($pkg['short_name'] ?? '');
               $name       = (string) ($pkg['name'] ?? $short);
               $installed  = (string) ($pkg['installed_version'] ?? ($pkg['version'] ?? ''));
@@ -145,6 +165,23 @@ $fmtAge = function (int $ts): string {
                   <?php endif; ?>
                 <?php else: ?>
                   <span style="color:#94a3b8">—</span>
+                <?php endif; ?>
+                <?php
+                  // Changelog link: registry products → the live worker changelog;
+                  // GitHub sources → the repo's releases page.
+                  $clUrl = '';
+                  if ($isRegistry && $regProduct !== '' && $regUrl !== '') {
+                    $clUrl = parse_url($regUrl, PHP_URL_SCHEME) . '://' . parse_url($regUrl, PHP_URL_HOST) . '/changelog/' . $regProduct;
+                  } elseif ($remoteRepo !== '') {
+                    $clUrl = 'https://github.com/' . $remoteRepo . '/releases';
+                  }
+                ?>
+                <?php if ($clUrl !== ''): ?>
+                  <div style="margin-top:3px">
+                    <a href="<?= $h($clUrl) ?>" target="_blank" rel="noopener" style="font-size:11px;color:#5b21b6;text-decoration:none" title="View release notes / changelog">
+                      <i class="fal fa-file-alt" aria-hidden="true"></i> changelog ↗
+                    </a>
+                  </div>
                 <?php endif; ?>
               </td>
               <td style="padding:8px 12px;color:#64748b;font-size:12px;white-space:nowrap">

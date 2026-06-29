@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-06-29
+
+### Added
+- **Changelog link on the Releases screen.** Each tracked add-on links to its
+  release notes — registry products to the live `updates.nivoli.com` changelog,
+  GitHub sources to their releases page — so you can see what changed before
+  updating.
+
+### Changed
+- **Releases screen groups updatable add-ons first** — an "Updates available
+  (N)" group at the top, then "All tracked add-ons", so pending updates are
+  surfaced rather than buried in the list.
+- **EE7-fit badge wording** now reads as a status rather than an action:
+  "EE7 ready" / "EE7 unverified" / "Pre-EE7" (was "Review for EE7" etc.), and
+  the badges are styled as non-interactive labels.
+
 ## [2.5.0] - 2026-06-29
 
 ### Added

@@ -246,14 +246,14 @@ class CompatibilityScanner
 
         if ($legacy) {
             $verdict = 'legacy';
-            $label = 'Legacy (pre-EE7)';
+            $label = 'Pre-EE7';
         } elseif (($eeMajor !== null && $eeMajor >= 7)
             || ($namespaced && ($eeMajor === null || $eeMajor >= 6))) {
             $verdict = 'good';
             $label = 'EE7 ready';
         } else {
             $verdict = 'review';
-            $label = 'Review for EE7';
+            $label = 'EE7 unverified';
         }
 
         return [
