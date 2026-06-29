@@ -97,36 +97,39 @@ $inputCss = 'padding:5px 8px;border:1px solid #cbd5e1;border-radius:4px;font-fam
           return ob_get_clean();
         };
 
-        // Configured = a source is declared (manifest, read-only) or set
-        // here (admin). Everything else is open to configure.
+        // Configured = a source is declared (manifest, read-only) or set here
+        // (admin). The rest are open to configure, split installed-first.
         $configured = [];
-        $open = [];
+        $installedOpen = [];
+        $notInstalledOpen = [];
         foreach ($rows as $r) {
           if (! empty($r['is_manifest']) || (($r['admin_type'] ?? 'none') !== 'none')) {
             $configured[] = $r;
+          } elseif (! empty($r['is_installed'])) {
+            $installedOpen[] = $r;
           } else {
-            $open[] = $r;
+            $notInstalledOpen[] = $r;
           }
         }
+
+        $section = function (string $title, array $list) use ($renderRow, $h) {
+          if (empty($list)) {
+            return;
+          }
+          ?>
+          <div class="addi-pkg-section">
+            <h3><?= $h($title) ?> <span class="addi-pkg-count"><?= count($list) ?></span></h3>
+            <div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
+              <?php foreach ($list as $i => $r) { echo $renderRow($r, $i); } ?>
+            </div>
+          </div>
+          <?php
+        };
+
+        $section('Configured', $configured);
+        $section('Installed — available to configure', $installedOpen);
+        $section('Not installed', $notInstalledOpen);
         ?>
-
-        <?php if (! empty($configured)): ?>
-          <div class="addi-pkg-section">
-            <h3>Configured <span class="addi-pkg-count"><?= count($configured) ?></span></h3>
-            <div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
-              <?php foreach ($configured as $i => $r) { echo $renderRow($r, $i); } ?>
-            </div>
-          </div>
-        <?php endif; ?>
-
-        <?php if (! empty($open)): ?>
-          <div class="addi-pkg-section">
-            <h3>Available to configure <span class="addi-pkg-count"><?= count($open) ?></span></h3>
-            <div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
-              <?php foreach ($open as $i => $r) { echo $renderRow($r, $i); } ?>
-            </div>
-          </div>
-        <?php endif; ?>
 
         <p style="margin-top:14px">
           <button class="button button--primary" type="submit">Save sources</button>

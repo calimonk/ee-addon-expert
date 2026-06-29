@@ -117,6 +117,7 @@ class Sources extends AbstractRoute
                 'short_name'        => $short,
                 'name'              => (string) ($pkg['name'] ?? $short),
                 'installed'         => (string) ($pkg['installed_version'] ?? ($pkg['version'] ?? '')),
+                'is_installed'      => ! empty($pkg['is_installed']),
                 'is_manifest'       => $isManifest,
                 'declared'          => $declared,
                 'admin_type'        => $adminType,
