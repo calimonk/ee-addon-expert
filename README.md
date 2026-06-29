@@ -330,6 +330,23 @@ Run PHP lint after editing PHP files:
 for f in *.php ControlPanel/*.php ControlPanel/Routes/*.php Service/*.php views/*.php; do php -l "$f" || exit 1; done
 ```
 
+### Tests
+
+The service layer has a standalone test suite (plain PHP, no PHPUnit) that
+runs without an EE bootstrap — `ee()` calls are guarded and paths are
+injected. Run the whole suite:
+
+```bash
+php tests/run.php          # all suites, non-zero exit on any failure
+php tests/test-trust.php   # one suite
+```
+
+Covers the high-risk pure logic: TOFU trust comparison, release-zip
+root detection, `requires` parsing + the compatibility verdict, the
+force-override patch, the feature scanner, and the quarantine round-trip.
+CI (`.github/workflows/tests.yml`) lints every PHP file and runs the suite
+on each push. `tests/` and `.github/` are excluded from the release zip.
+
 `AGENTS.md` is local development guidance and is intentionally not part of this repository's public documentation.
 
 ## License

@@ -2,6 +2,8 @@
 # dev files from `git archive` (the release zip). Runtime code, views,
 # language, README, LICENSE, and CHANGELOG still ship.
 docs/            export-ignore
+tests/           export-ignore
+.github/         export-ignore
 CONTRIBUTING.md  export-ignore
 .gitignore       export-ignore
 .gitattributes   export-ignore
