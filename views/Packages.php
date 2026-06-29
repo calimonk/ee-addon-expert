@@ -2,6 +2,158 @@
 $h = fn($value) => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $packages = $packages ?? [];
 $csrfToken = $csrf_token ?? '';
+
+// Segment installed vs not-installed (the incoming list is already sorted
+// by installed-then-name; this just groups it).
+$installed = [];
+$available = [];
+foreach ($packages as $p) {
+    if (! empty($p['is_installed'])) {
+        $installed[] = $p;
+    } else {
+        $available[] = $p;
+    }
+}
+
+// Hidden CSRF inputs for the inline POST forms.
+$csrf = function () use ($csrfToken, $h) {
+    if ($csrfToken === '') {
+        return '';
+    }
+    return '<input type="hidden" name="csrf_token" value="' . $h($csrfToken) . '">'
+         . '<input type="hidden" name="XID" value="' . $h($csrfToken) . '">';
+};
+
+// One package row.
+$row = function (array $p) use ($h, $csrf) {
+    $name        = (string) ($p['name'] ?? $p['short_name'] ?? '');
+    $short       = (string) ($p['short_name'] ?? '');
+    $desc        = (string) ($p['description'] ?? '');
+    $author      = (string) ($p['author'] ?? '');
+    $installed   = ! empty($p['is_installed']);
+    $instVer     = (string) ($p['installed_version'] ?? '');
+    $diskVer     = (string) ($p['version'] ?? '');
+    $shownVer    = $installed ? ($instVer !== '' ? $instVer : $diskVer) : $diskVer;
+    $remoteUpd   = ! empty($p['remote_update_available']);
+    $remoteVer   = (string) ($p['remote_version'] ?? '');
+    $eeUpd       = ! empty($p['update_available']);
+    $overridden  = ! empty($p['is_overridden']);
+    $compat      = (array) ($p['compat_issues'] ?? []);
+
+    ob_start();
+    ?>
+    <tr<?= $remoteUpd ? ' class="is-update"' : '' ?>>
+      <td class="addi-pkg-name">
+        <div class="addi-pkg-title"><?= $h($name) ?></div>
+        <code><?= $h($short) ?></code>
+        <?php if ($desc !== ''): ?>
+          <div class="addi-pkg-desc"><?= $h($desc) ?></div>
+        <?php endif; ?>
+        <?php if ($overridden):
+          $ov = $p['override_info'] ?? [];
+          $origStr = [];
+          foreach ((array) ($ov['original_requires'] ?? []) as $k => $v) { $origStr[] = $k . ' ' . $v; }
+        ?>
+          <span class="addi-pkg-flag is-warn" title="Requirements overridden at install<?= ! empty($origStr) ? ' (declared ' . $h(implode(', ', $origStr)) . ')' : '' ?>">⚠ requirement override</span>
+        <?php elseif (! empty($compat)): ?>
+          <span class="addi-pkg-flag is-bad" title="<?= $h(implode(' ', $compat)) ?>">⚠ incompatible</span>
+        <?php endif; ?>
+      </td>
+      <td class="addi-pkg-ver">
+        <?= $h($shownVer !== '' ? $shownVer : '—') ?>
+        <?php if ($remoteUpd && $remoteVer !== ''): ?>
+          <span class="addi-pkg-newver" title="Newer release available">&rarr; v<?= $h($remoteVer) ?></span>
+        <?php elseif ($eeUpd): ?>
+          <span class="addi-pkg-newver" title="An EE update is pending for this add-on">update&nbsp;pending</span>
+        <?php endif; ?>
+      </td>
+      <td class="addi-pkg-author"><?= $h($author !== '' ? $author : '—') ?></td>
+      <td>
+        <div class="addi-pkg-actions">
+          <?php if (! $installed && ! empty($p['install_url'])): ?>
+            <form class="addi-inline-form" method="post" action="<?= $h($p['install_url']) ?>">
+              <?= $csrf() ?>
+              <button class="button button--primary addi-icon-button" type="submit" title="Install <?= $h($name) ?>" aria-label="Install <?= $h($name) ?>">
+                <i class="fal fa-plus-circle" aria-hidden="true"></i>
+              </button>
+            </form>
+          <?php endif; ?>
+
+          <?php if ($remoteUpd && ! empty($p['remote_install_url'])): ?>
+            <form class="addi-inline-form" method="post" action="<?= $h($p['remote_install_url']) ?>"
+                  onsubmit="return confirm('Download and replace <?= $h($name) ?> with the latest release (v<?= $h($remoteVer) ?>)? The previous version will be kept as a backup.');">
+              <?= $csrf() ?>
+              <input type="hidden" name="install_release" value="1">
+              <input type="hidden" name="short_name" value="<?= $h($short) ?>">
+              <button class="button button--primary addi-icon-button" type="submit" style="background:#f59e0b;border-color:#f59e0b"
+                      title="Update <?= $h($name) ?> to v<?= $h($remoteVer) ?>" aria-label="Update <?= $h($name) ?>">
+                <i class="fal fa-cloud-download-alt" aria-hidden="true"></i>
+              </button>
+            </form>
+          <?php endif; ?>
+
+          <?php if ($eeUpd && ! empty($p['update_url'])): ?>
+            <form class="addi-inline-form" method="post" action="<?= $h($p['update_url']) ?>">
+              <?= $csrf() ?>
+              <button class="button button--primary addi-icon-button" type="submit" title="Run EE update for <?= $h($name) ?>" aria-label="Update <?= $h($name) ?>">
+                <i class="fal fa-sync-alt" aria-hidden="true"></i>
+              </button>
+            </form>
+          <?php endif; ?>
+
+          <a class="button button--default addi-icon-button" href="<?= $h($p['download_url'] ?? '') ?>" title="Download <?= $h($name) ?> as ZIP" aria-label="Download <?= $h($name) ?>">
+            <i class="fal fa-download" aria-hidden="true"></i>
+          </a>
+
+          <?php if (! empty($p['settings_available']) && ! empty($p['settings_url'])): ?>
+            <a class="button button--default addi-icon-button" href="<?= $h($p['settings_url']) ?>" title="Settings for <?= $h($name) ?>" aria-label="Settings for <?= $h($name) ?>">
+              <i class="fal fa-cog" aria-hidden="true"></i>
+            </a>
+          <?php else: ?>
+            <span class="button button--default addi-icon-button addi-button-disabled" title="No settings" aria-disabled="true"><i class="fal fa-cog" aria-hidden="true"></i></span>
+          <?php endif; ?>
+
+          <?php if ($installed && ! empty($p['remove_url'])): ?>
+            <form class="addi-inline-form" method="post" action="<?= $h($p['remove_url']) ?>" onsubmit="return confirm('Uninstall <?= $h($name) ?>?');">
+              <?= $csrf() ?>
+              <button class="button addi-icon-button addi-icon-danger" type="submit" title="Uninstall <?= $h($name) ?>" aria-label="Uninstall <?= $h($name) ?>">
+                <i class="fal fa-trash-alt" aria-hidden="true"></i>
+              </button>
+            </form>
+          <?php endif; ?>
+        </div>
+      </td>
+    </tr>
+    <?php
+    return ob_get_clean();
+};
+
+$section = function (string $title, array $rows, string $emptyMsg) use ($h, $row) {
+    ?>
+    <div class="addi-pkg-section">
+      <h3><?= $h($title) ?> <span class="addi-pkg-count"><?= count($rows) ?></span></h3>
+      <?php if (empty($rows)): ?>
+        <p class="addi-muted" style="font-size:13px;margin:6px 0 0"><?= $h($emptyMsg) ?></p>
+      <?php else: ?>
+        <div class="addi-pkg-tablewrap">
+          <table class="addi-pkg-table">
+            <thead>
+              <tr>
+                <th>Add-on</th>
+                <th>Version</th>
+                <th>Author</th>
+                <th class="addi-pkg-actions-head">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($rows as $p) { echo $row($p); } ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </div>
+    <?php
+};
 ?>
 <div class="addi-wrap">
   <?php include __DIR__ . '/_finalize_banner.php'; ?>
@@ -13,154 +165,14 @@ $csrfToken = $csrf_token ?? '';
   </p>
 
   <section class="addi-card">
-    <h2>Detected Add-on Packages</h2>
-
+    <h2>Add-on Packages</h2>
     <?php if (empty($packages)): ?>
       <p class="addi-muted">No add-on packages with an <code>addon.setup.php</code> file were found.</p>
     <?php else: ?>
-      <div class="addi-package-grid">
-        <?php foreach ($packages as $package): ?>
-          <article class="addi-package-card">
-            <header class="addi-package-head">
-              <div>
-                <h3><?= $h($package['name'] ?? '') ?></h3>
-                <code><?= $h($package['short_name'] ?? '') ?></code>
-              </div>
-              <?php if (! empty($package['remote_update_available'])): ?>
-                <a class="addi-tag is-update"
-                   href="<?= $h($package['remote_release_url'] ?? '') ?>"
-                   target="_blank" rel="noopener"
-                   style="background:#f59e0b;color:#fff;text-decoration:none"
-                   title="A newer release exists on GitHub. Click to view release notes.">
-                  GitHub: v<?= $h($package['remote_version'] ?? '') ?> ↗
-                </a>
-              <?php elseif (! empty($package['update_available'])): ?>
-                <span class="addi-tag is-update">Update Available</span>
-              <?php elseif (! empty($package['is_installed'])): ?>
-                <span class="addi-tag is-installed">Installed</span>
-              <?php else: ?>
-                <span class="addi-tag is-not-installed">Not Installed</span>
-              <?php endif; ?>
-            </header>
-
-            <?php if (! empty($package['is_overridden'])): ?>
-              <?php
-                $ov = $package['override_info'] ?? [];
-                $origReq = $ov['original_requires'] ?? [];
-                $origStr = [];
-                foreach ($origReq as $k => $v) { $origStr[] = $k . ' ' . $v; }
-              ?>
-              <p style="margin:0 0 8px">
-                <span style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:600"
-                      title="This add-on's declared requirements were overridden at install. Original: <?= $h(implode(', ', $origStr)) ?>">
-                  ⚠ requirement override<?= ! empty($origStr) ? ' (declared ' . $h(implode(', ', $origStr)) . ')' : '' ?>
-                </span>
-                <?php if (! empty($ov['scan'])): ?>
-                  <span class="addi-muted" style="font-size:11.5px;display:block;margin-top:3px">
-                    <strong>Scan at force time:</strong> <?= $h($ov['scan']) ?>
-                  </span>
-                <?php endif; ?>
-              </p>
-            <?php elseif (! empty($package['compat_issues'])): ?>
-              <p style="margin:0 0 8px">
-                <span style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:600"
-                      title="<?= $h(implode(' ', $package['compat_issues'])) ?>">
-                  ⚠ incompatible — <?= $h(implode(' ', $package['compat_issues'])) ?>
-                </span>
-                <?php if (empty($package['is_installed'])): ?>
-                  <span class="addi-muted" style="font-size:11.5px;display:block;margin-top:3px">
-                    EE will refuse to install this. To force it, re-upload via
-                    <strong>Install ZIP</strong> with "Override version requirements" ticked.
-                  </span>
-                <?php endif; ?>
-              </p>
-            <?php endif; ?>
-
-            <?php if (! empty($package['description'])): ?>
-              <p class="addi-package-description"><?= $h($package['description']) ?></p>
-            <?php endif; ?>
-
-            <dl class="addi-package-meta">
-              <div>
-                <dt>Version</dt>
-                <dd><?= $h($package['version'] !== '' ? $package['version'] : 'Unknown') ?></dd>
-              </div>
-              <div>
-                <dt>Author</dt>
-                <dd><?= $h($package['author'] !== '' ? $package['author'] : 'Unknown') ?></dd>
-              </div>
-            </dl>
-
-            <footer class="addi-package-actions">
-              <?php if (empty($package['is_installed']) && ! empty($package['install_url'])): ?>
-                <form class="addi-inline-form" method="post" action="<?= $h($package['install_url']) ?>">
-                  <?php if ($csrfToken !== ''): ?>
-                    <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
-                    <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
-                  <?php endif; ?>
-                  <button class="button button--primary addi-icon-button" type="submit" title="Install <?= $h($package['name'] ?? 'add-on') ?>" aria-label="Install <?= $h($package['name'] ?? 'add-on') ?>">
-                    <i class="fal fa-plus-circle" aria-hidden="true"></i>
-                  </button>
-                </form>
-              <?php endif; ?>
-              <?php if (! empty($package['remote_update_available']) && ! empty($package['remote_install_url'])): ?>
-                <form class="addi-inline-form"
-                      method="post"
-                      action="<?= $h($package['remote_install_url']) ?>"
-                      onsubmit="return confirm('Download and replace <?= $h($package['name'] ?? 'this add-on') ?> with the latest release (v<?= $h($package['remote_version'] ?? '') ?>)? The previous version will be kept as a backup.');">
-                  <?php if ($csrfToken !== ''): ?>
-                    <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
-                    <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
-                  <?php endif; ?>
-                  <input type="hidden" name="install_release" value="1">
-                  <input type="hidden" name="short_name" value="<?= $h($package['short_name'] ?? '') ?>">
-                  <button class="button button--primary addi-icon-button"
-                          type="submit"
-                          style="background:#f59e0b;border-color:#f59e0b"
-                          title="Update <?= $h($package['name'] ?? 'add-on') ?> to v<?= $h($package['remote_version'] ?? '') ?>"
-                          aria-label="Update <?= $h($package['name'] ?? 'add-on') ?>">
-                    <i class="fal fa-cloud-download-alt" aria-hidden="true"></i>
-                  </button>
-                </form>
-              <?php endif; ?>
-              <?php if (! empty($package['update_available']) && ! empty($package['update_url'])): ?>
-                <form class="addi-inline-form" method="post" action="<?= $h($package['update_url']) ?>">
-                  <?php if ($csrfToken !== ''): ?>
-                    <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
-                    <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
-                  <?php endif; ?>
-                  <button class="button button--primary addi-icon-button" type="submit" title="Update <?= $h($package['name'] ?? 'add-on') ?>" aria-label="Update <?= $h($package['name'] ?? 'add-on') ?>">
-                    <i class="fal fa-sync-alt" aria-hidden="true"></i>
-                  </button>
-                </form>
-              <?php endif; ?>
-              <a class="button button--primary addi-icon-button" href="<?= $h($package['download_url'] ?? '') ?>" title="Download <?= $h($package['name'] ?? 'add-on') ?>" aria-label="Download <?= $h($package['name'] ?? 'add-on') ?>">
-                <i class="fal fa-download" aria-hidden="true"></i>
-              </a>
-              <?php if (! empty($package['settings_available']) && ! empty($package['settings_url'])): ?>
-                <a class="button button--default addi-icon-button" href="<?= $h($package['settings_url']) ?>" title="Settings for <?= $h($package['name'] ?? 'add-on') ?>" aria-label="Settings for <?= $h($package['name'] ?? 'add-on') ?>">
-                  <i class="fal fa-cog" aria-hidden="true"></i>
-                </a>
-              <?php else: ?>
-                <span class="button button--default addi-icon-button addi-button-disabled" title="Settings unavailable" aria-disabled="true" aria-label="Settings unavailable">
-                  <i class="fal fa-cog" aria-hidden="true"></i>
-                </span>
-              <?php endif; ?>
-              <?php if (! empty($package['is_installed']) && ! empty($package['remove_url'])): ?>
-                <form class="addi-inline-form" method="post" action="<?= $h($package['remove_url']) ?>" onsubmit="return confirm('Uninstall <?= $h($package['name'] ?? 'this add-on') ?>?');">
-                  <?php if ($csrfToken !== ''): ?>
-                    <input type="hidden" name="csrf_token" value="<?= $h($csrfToken) ?>">
-                    <input type="hidden" name="XID" value="<?= $h($csrfToken) ?>">
-                  <?php endif; ?>
-                  <button class="button addi-icon-button addi-icon-danger" type="submit" title="Uninstall <?= $h($package['name'] ?? 'add-on') ?>" aria-label="Uninstall <?= $h($package['name'] ?? 'add-on') ?>">
-                    <i class="fal fa-trash-alt" aria-hidden="true"></i>
-                  </button>
-                </form>
-              <?php endif; ?>
-            </footer>
-          </article>
-        <?php endforeach; ?>
-      </div>
+      <?php
+        $section('Installed', $installed, 'No add-ons are installed yet.');
+        $section('Available', $available, 'Every detected add-on is installed.');
+      ?>
     <?php endif; ?>
   </section>
 </div>

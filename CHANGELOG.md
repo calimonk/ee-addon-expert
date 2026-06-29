@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.4.2] - 2026-06-29
+
+### Changed
+- **Packages screen redesigned for scannability.** Replaced the bulky
+  3-column card grid (mixing installed and not-installed) with two compact,
+  grouped tables — **Installed** and **Available** — each with a count. Each
+  row shows name + short name + a one-line description, the version (with a
+  `→ vX` badge when a newer release is tracked, or "update pending"), the
+  author, and the same inline actions (install / update-from-release / EE
+  update / settings / remove / download ZIP). Requirement-override and
+  incompatibility flags are shown inline.
+
 ## [2.4.1] - 2026-06-29
 
 ### Fixed
